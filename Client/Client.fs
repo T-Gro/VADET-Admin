@@ -22,17 +22,14 @@ open Fulma
 // in this case, we are keeping track of a counter
 // we mark it as optional, because initially it will not be available from the client
 // the initial value will be requested from server
-type Model = { Counter: Counter option; TableItems : int ; Rename : Rename option}
+type Model = { TableItems : int ; Rename : Rename option}
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
 type Msg =
-| Increment
-| Decrement
 | Delete of int
 | Rename of int
 | RenameLoaded of Result<Rename,exn>
-| InitialCountLoaded of Result<Counter, exn>
 
 module Server =
 
@@ -45,17 +42,16 @@ module Server =
       |> Remoting.withRouteBuilder Route.builder
       |> Remoting.buildProxy<ICounterApi>
 
-let initialCounter = Server.api.initialCounter
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { Counter = None; TableItems = 10; Rename = None }
+    let initialModel = { TableItems = 10; Rename = None }
     let loadCountCmd =
         Cmd.ofAsync
-            initialCounter
-            ()
-            (Ok >> InitialCountLoaded)
-            (Error >> InitialCountLoaded)
+            Server.api.rename
+            3
+            (Ok >> RenameLoaded)
+            (Error >> RenameLoaded)
     initialModel, loadCountCmd
 
 
@@ -64,16 +60,7 @@ let init () : Model * Cmd<Msg> =
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
-    match currentModel.Counter, msg with
-    | Some counter, Increment ->
-        let nextModel = { currentModel with Counter = Some { Value = counter.Value + 1 } }
-        nextModel, Cmd.none
-    | Some counter, Decrement ->
-        let nextModel = { currentModel with Counter = Some { Value = counter.Value - 1 } }
-        nextModel, Cmd.none
-    | _, InitialCountLoaded (Ok initialCount)->
-        let nextModel = { Counter = Some initialCount; TableItems = 10; Rename = Some{NewName = "Lala"; Id = 2} }
-        nextModel, Cmd.none
+    match currentModel, msg with
     | _, RenameLoaded (Ok newName) ->
         {currentModel with Rename = Some newName }, Cmd.none
     | _, Rename idx ->
@@ -89,9 +76,6 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
 
 
 
-let show = function
-| { Counter = Some counter } -> string counter.Value
-| { Counter = None   } -> "Loading..."
 
 let navBrand =
     Navbar.navbar [ Navbar.Color IsWhite ]
@@ -121,11 +105,11 @@ let breadcrump =
               [ a [ ] [ str "New candidates" ] ] ]
 
 let hero =
-    Hero.hero [ Hero.Color IsInfo               
+    Hero.hero [ Hero.Color IsInfo             
                 Hero.CustomClass "welcome" ]
         [ Hero.body [ ]
             [ Container.container [ Container.IsFluid  ]
-                [ Heading.h1 [ ]
+                [ Heading.h3 [ ]
                       [ str "Hello, Admin." ]
                    ] ] ]
 
@@ -161,22 +145,7 @@ let info =
                             Heading.p [ Heading.IsSubtitle ]
                                 [ str "Exceptions" ] ] ] ] ] ]
 
-let counter (model : Model) (dispatch : Msg -> unit) =
-    Field.div [ Field.IsGrouped ]
-        [ Control.p [ Control.IsExpanded ]
-            [ Input.text
-                [ Input.Disabled true
-                  Input.Value (show model) ] ]
-          Control.p [ ]
-            [ Button.a
-                [ Button.Color IsInfo
-                  Button.OnClick (fun _ -> dispatch Increment) ]
-                [ str "+" ] ]
-          Control.p [ ]
-            [ Button.a
-                [ Button.Color IsInfo
-                  Button.OnClick (fun _ -> dispatch Decrement) ]
-                [ str "-" ] ] ]
+
 
 let columns (model : Model) (dispatch : Msg -> unit) =
             let namingFunc idx =
@@ -184,7 +153,7 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                 | Some(record) when record.Id = idx -> record.NewName
                 | _ -> "Lorem ipsum g"
 
-            Card.card [ CustomClass "events-card" ]
+            Card.card [ CustomClass "list-card" ]
                 [ Card.header [ ]
                     [ Card.Header.title [ ]
                         [ str "New candidates" ]

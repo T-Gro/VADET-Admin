@@ -1,6 +1,5 @@
 namespace Shared
 
-type Counter = { Value : int }
 type Rename = {NewName : string; Id : int}
 
 module Route =
@@ -11,5 +10,4 @@ module Route =
 /// A type that specifies the communication protocol between client and server
 /// to learn more, read the docs at https://zaid-ajaj.github.io/Fable.Remoting/src/basics.html
 type ICounterApi =
-    { initialCounter : unit -> Async<Counter>;
-      rename : int -> Async<Rename>}
+    { rename : int -> Async<Rename>}

@@ -17,11 +17,9 @@ let publicPath = Path.GetFullPath "../Client/public"
 
 let port = "SERVER_PORT" |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
 
-let getInitCounter() : Task<Counter> = task { return { Value = 42 } }
-let rename idx = task {return {NewName = string idx + System.Guid.NewGuid().ToString(); Id = idx}} 
+let rename idx = task {return {NewName = String.replicate 10 (string idx); Id = idx}} 
 
-let counterApi = {
-    initialCounter = getInitCounter >> Async.AwaitTask;
+let counterApi = {   
     rename = rename >> Async.AwaitTask   
 }
 
