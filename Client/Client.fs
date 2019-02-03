@@ -22,7 +22,7 @@ open Fulma
 // in this case, we are keeping track of a counter
 // we mark it as optional, because initially it will not be available from the client
 // the initial value will be requested from server
-type Model = { Counter: Counter option; TableItems : int }
+type Model = { Counter: Counter option; TableItems : int ; Rename : Rename option}
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
@@ -30,6 +30,8 @@ type Msg =
 | Increment
 | Decrement
 | Delete of int
+| Rename of int
+| RenameLoaded of Result<Rename,exn>
 | InitialCountLoaded of Result<Counter, exn>
 
 module Server =
@@ -47,7 +49,7 @@ let initialCounter = Server.api.initialCounter
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { Counter = None; TableItems = 10 }
+    let initialModel = { Counter = None; TableItems = 10; Rename = None }
     let loadCountCmd =
         Cmd.ofAsync
             initialCounter
@@ -70,11 +72,18 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let nextModel = { currentModel with Counter = Some { Value = counter.Value - 1 } }
         nextModel, Cmd.none
     | _, InitialCountLoaded (Ok initialCount)->
-        let nextModel = { Counter = Some initialCount; TableItems = 10 }
+        let nextModel = { Counter = Some initialCount; TableItems = 10; Rename = Some{NewName = "Lala"; Id = 2} }
         nextModel, Cmd.none
-    | _, Delete idx ->
-        let nextModel = {currentModel with TableItems = (currentModel.TableItems-1)}
-        nextModel, Cmd.none
+    | _, RenameLoaded (Ok newName) ->
+        {currentModel with Rename = Some newName }, Cmd.none
+    | _, Rename idx ->
+        let serverCallCmd =
+            Cmd.ofAsync
+                Server.api.rename
+                idx
+                (Ok >> RenameLoaded)
+                (Error >> RenameLoaded)
+        currentModel, serverCallCmd
     | _ -> currentModel, Cmd.none
 
 
@@ -170,6 +179,11 @@ let counter (model : Model) (dispatch : Msg -> unit) =
                 [ str "-" ] ] ]
 
 let columns (model : Model) (dispatch : Msg -> unit) =
+            let namingFunc idx =
+                match model.Rename with                
+                | Some(record) when record.Id = idx -> record.NewName
+                | _ -> "Lorem ipsum g"
+
             Card.card [ CustomClass "events-card" ]
                 [ Card.header [ ]
                     [ Card.Header.title [ ]
@@ -184,13 +198,13 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                   [ for idx in 1..model.TableItems ->
                                       tr [ ]
                                           [ td [ ]
-                                                [ str "Lorem ipsum dolor aire" ]
+                                                [ str ( namingFunc idx) ]
                                             td [ ]
                                                 [ Button.a
                                                     [ Button.Size IsSmall
                                                       Button.Color IsPrimary
-                                                      Button.OnClick (fun _ -> dispatch (Delete idx)) ]
-                                                    [ str "Action" ] ] ] ] ] ] ]
+                                                      Button.OnClick (fun _ -> dispatch (Rename idx)) ]
+                                                    [ str "Random name" ] ] ] ] ] ] ]
                   Card.footer [ ]
                       [ Card.Footer.div [ ]
                           [ str "View All" ] ] ]
