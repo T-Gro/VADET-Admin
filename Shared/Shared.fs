@@ -1,5 +1,14 @@
 namespace Shared
 
+type Image = Name of int
+type Patch = Name of int
+type ImagePatch = Image * Patch
+type Neighbor = Image * float
+type TextAttribute = Text of string
+type AttributeCorrelation = {Attribute : TextAttribute; Correlation : float}
+type AttributeCandidate = {Id : int; Representatives : ImagePatch list}
+type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list}
+
 type Rename = {NewName : string; Id : int}
 
 module Route =
