@@ -18,11 +18,23 @@ open Fable.FontAwesome
 open Fable.FontAwesome.Free
 open Fulma
 
+open Fable.Core
+open Fable.Core.JsInterop
+open Fable.Import.Browser
+
+[<Emit("window.prompt($0,$1) ")>]
+let promptDialog (headerText : string, defaultValue: string) : string = jsNative
+
 // The model holds data that you want to keep track of while the application is running
 // in this case, we are keeping track of a counter
 // we mark it as optional, because initially it will not be available from the client
 // the initial value will be requested from server
-type Model = { TableItems : int ; Rename : Rename option; Candidates : AttributeCandidate list}
+type Model = 
+    { 
+        TableItems : int ;
+        Rename : Rename option;
+        Candidates : AttributeCandidate list;
+        CurrentExpansion : AttributeExpansion option}
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
@@ -30,6 +42,11 @@ type Msg =
 | Delete of int
 | Rename of int
 | RenameLoaded of Result<Rename,exn>
+| FreshDataArrived of Result<AttributeCandidate,exn>
+| Reject of AttributeCandidate
+| Expand  of AttributeCandidate
+| AcceptTill of AttributeCandidate * Neighbor
+| ExpansionArrived of AttributeExpansion
 
 module Server =
 
