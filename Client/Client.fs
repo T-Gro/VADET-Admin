@@ -34,7 +34,8 @@ type Model =
         TableItems : int ;
         Rename : Rename option;
         Candidates : AttributeCandidate list;
-        CurrentExpansion : AttributeExpansion option}
+        CurrentExpansion : AttributeExpansion option;
+        PendingAjax : bool}
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
@@ -47,6 +48,8 @@ type Msg =
 | Expand  of AttributeCandidate
 | AcceptTill of AttributeCandidate * Neighbor
 | ExpansionArrived of AttributeExpansion
+| FireAjax
+| AjaxArrived
 
 module Server =
 
@@ -59,7 +62,7 @@ module Server =
       |> Remoting.withRouteBuilder Route.builder
       |> Remoting.buildProxy<ICounterApi>
 
-
+ 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
     let initialModel = { TableItems = 10; Rename = None; Candidates = [] }
@@ -78,8 +81,12 @@ let init () : Model * Cmd<Msg> =
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match currentModel, msg with
+    | _ ,FireAjax ->
+        {currentModel with PendingAjax = true}, Cmd.None
+    | _ , AjaxArrived ->
+        {currentModel with PendingAjax = false}, Cmd.None
     | _, RenameLoaded (Ok newName) ->
-        {currentModel with Rename = Some newName }, Cmd.none
+        {currentModel with Rename = Some newName }, Cmd.ofMsg AjaxArrived
     | _, Rename idx ->
         let serverCallCmd =
             Cmd.ofAsync
@@ -87,7 +94,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                 idx
                 (Ok >> RenameLoaded)
                 (Error >> RenameLoaded)
-        currentModel, serverCallCmd
+        currentModel, Cmd.batch  [Cmd.ofMsg FireAjax; serverCallCmd]
     | _ -> currentModel, Cmd.none
 
 
@@ -130,37 +137,6 @@ let hero =
                       [ str "Hello, Admin." ]
                    ] ] ]
 
-let info =
-    section [ Class "info-tiles" ]
-        [ Tile.ancestor [ Tile.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ]
-            [ Tile.parent [ ]
-                  [ Tile.child [ ]
-                      [ Box.box' [ ]
-                          [ Heading.p [ ]
-                                [ str "439k" ]
-                            Heading.p [ Heading.IsSubtitle ]
-                                [ str "Users" ] ] ] ]
-              Tile.parent [ ]
-                  [ Tile.child [ ]
-                      [ Box.box' [ ]
-                          [ Heading.p [ ]
-                                [ str "59k" ]
-                            Heading.p [ Heading.IsSubtitle ]
-                                [ str "Products" ] ] ] ]
-              Tile.parent [ ]
-                  [ Tile.child [ ]
-                      [ Box.box' [ ]
-                          [ Heading.p [ ]
-                                [ str "3.4k" ]
-                            Heading.p [ Heading.IsSubtitle ]
-                                [ str "Open Orders" ] ] ] ]
-              Tile.parent [ ]
-                  [ Tile.child [ ]
-                      [ Box.box' [ ]
-                          [ Heading.p [ ]
-                                [ str "19" ]
-                            Heading.p [ Heading.IsSubtitle ]
-                                [ str "Exceptions" ] ] ] ] ] ]
 
 
 
@@ -222,8 +198,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                   [ 
                     Column.column [ Column.Width (Screen.All, Column.Is12) ]
                       [ breadcrump
-                        hero
-                        //info
+                        hero                      
                         columns model dispatch ] ] ] ]
 
 #if DEBUG
