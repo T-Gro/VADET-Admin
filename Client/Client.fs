@@ -22,7 +22,7 @@ open Fulma
 // in this case, we are keeping track of a counter
 // we mark it as optional, because initially it will not be available from the client
 // the initial value will be requested from server
-type Model = { TableItems : int ; Rename : Rename option}
+type Model = { TableItems : int ; Rename : Rename option; Candidates : AttributeCandidate list}
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
@@ -45,7 +45,7 @@ module Server =
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { TableItems = 10; Rename = None }
+    let initialModel = { TableItems = 10; Rename = None; Candidates = [] }
     let loadCountCmd =
         Cmd.ofAsync
             Server.api.rename
@@ -173,7 +173,24 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                                     [ Button.Size IsSmall
                                                       Button.Color IsPrimary
                                                       Button.OnClick (fun _ -> dispatch (Rename idx)) ]
-                                                    [ str "Random name" ] ] ] ] ] ] ]
+                                                    [ str "Random name" ] ] ] ] ] ];
+                            div [] [str "Blax"];
+                            div [] [str "Blux"];
+                            Table.table
+                              [ Table.IsFullWidth
+                                Table.IsStriped ]
+                              [ tbody [ ]
+                                  [ for idx in 1..model.TableItems ->
+                                      tr [ ]
+                                          [ td [ ]
+                                                [ str ( namingFunc idx) ]
+                                            td [ ]
+                                                [ Button.a
+                                                    [ Button.Size IsSmall
+                                                      Button.Color IsPrimary
+                                                      Button.OnClick (fun _ -> dispatch (Rename idx)) ]
+                                                    [ str "Random name" ] ] ] ] ] 
+                      ]
                   Card.footer [ ]
                       [ Card.Footer.div [ ]
                           [ str "View All" ] ] ]
