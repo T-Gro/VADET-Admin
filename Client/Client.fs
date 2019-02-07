@@ -18,8 +18,7 @@ open Fable.FontAwesome
 open Fable.FontAwesome.Free
 open Fulma
 open Fable.Core
-open Fable.Core.JsInterop
-open Fable.Import.Browser
+
 
 [<Fable.Core.Emit("window.prompt($0,$1) ")>]
 let promptDialog (headerText : string, defaultValue: string) : string = Exceptions.jsNative
@@ -195,7 +194,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
           Container.container [ Container.IsFluid ]
               [ Columns.columns [ ]
                   [ 
-                    Column.column [ Column.Width (Fulma.All , Column.Is12) ]
+                    Column.column [ Column.Width ( Screen.All , Column.Is12) ]
                       [ breadcrump
                         hero                      
                         columns model dispatch ] ] ] ]
