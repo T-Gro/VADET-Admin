@@ -17,14 +17,12 @@ open Fulma
 open Fable.FontAwesome
 open Fable.FontAwesome.Free
 open Fulma
-
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.Import.Browser
-open Fulma
 
-[<Emit("window.prompt($0,$1) ")>]
-let promptDialog (headerText : string, defaultValue: string) : string = jsNative
+[<Fable.Core.Emit("window.prompt($0,$1) ")>]
+let promptDialog (headerText : string, defaultValue: string) : string = Exceptions.jsNative
 
 // The model holds data that you want to keep track of while the application is running
 // in this case, we are keeping track of a counter
