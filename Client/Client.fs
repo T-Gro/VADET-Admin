@@ -21,6 +21,7 @@ open Fulma
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.Import.Browser
+open Fulma
 
 [<Emit("window.prompt($0,$1) ")>]
 let promptDialog (headerText : string, defaultValue: string) : string = jsNative
@@ -65,7 +66,7 @@ module Server =
  
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { TableItems = 10; Rename = None; Candidates = [] }
+    let initialModel = { TableItems = 10; Rename = None; Candidates = []; CurrentExpansion = None; PendingAjax = false }
     let loadCountCmd =
         Cmd.ofAsync
             Server.api.rename
@@ -82,9 +83,9 @@ let init () : Model * Cmd<Msg> =
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match currentModel, msg with
     | _ ,FireAjax ->
-        {currentModel with PendingAjax = true}, Cmd.None
+        {currentModel with PendingAjax = true}, Cmd.none
     | _ , AjaxArrived ->
-        {currentModel with PendingAjax = false}, Cmd.None
+        {currentModel with PendingAjax = false}, Cmd.none
     | _, RenameLoaded (Ok newName) ->
         {currentModel with Rename = Some newName }, Cmd.ofMsg AjaxArrived
     | _, Rename idx ->
@@ -196,7 +197,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
           Container.container [ Container.IsFluid ]
               [ Columns.columns [ ]
                   [ 
-                    Column.column [ Column.Width (Screen.All, Column.Is12) ]
+                    Column.column [ Column.Width (Fulma.All , Column.Is12) ]
                       [ breadcrump
                         hero                      
                         columns model dispatch ] ] ] ]

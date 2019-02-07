@@ -32,7 +32,7 @@ type ICounterApi =
     { 
         rename : int -> Async<Rename>;
         load : unit -> Async<InitialDisplay>;
-        expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
-        acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
-        rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
+        //expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
+        //acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
+        //rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
     }

@@ -18,9 +18,11 @@ let publicPath = Path.GetFullPath "../Client/public"
 let port = "SERVER_PORT" |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
 
 let rename idx = task {return {NewName = String.replicate 10 (string idx); Id = idx}} 
+let load () = task{return {Candidates = Map.empty}} 
 
 let counterApi = {   
-    rename = rename >> Async.AwaitTask   
+    rename = rename >> Async.AwaitTask;
+    load = load >> Async.AwaitTask
 }
 
 let webApp =
