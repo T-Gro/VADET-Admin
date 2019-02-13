@@ -18,6 +18,7 @@ open Fable.FontAwesome
 open Fable.FontAwesome.Free
 open Fulma
 open Fable.Core
+open Fable.Import.React
 
 
 [<Fable.Core.Emit("window.prompt($0,$1) ")>]
@@ -28,9 +29,7 @@ let promptDialog (headerText : string, defaultValue: string) : string = Exceptio
 // we mark it as optional, because initially it will not be available from the client
 // the initial value will be requested from server
 type Model = 
-    { 
-        TableItems : int ;
-        Rename : Rename option;
+    {          
         Candidates : AttributeCandidate list;
         CurrentExpansion : AttributeExpansion option;
         PendingAjax : bool}
@@ -38,9 +37,6 @@ type Model =
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
 type Msg =
-| Delete of int
-| Rename of int
-| RenameLoaded of Result<Rename,exn>
 | FreshDataArrived of Result<AttributeCandidate,exn>
 | Reject of AttributeCandidate
 | Expand  of AttributeCandidate
@@ -48,6 +44,7 @@ type Msg =
 | ExpansionArrived of Result<AttributeExpansion,exn>
 | FireAjax
 | AjaxArrived
+| CloseModal
 
 module Server =
 
@@ -63,14 +60,12 @@ module Server =
  
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { TableItems = 10; Rename = None; Candidates = []; CurrentExpansion = None; PendingAjax = false }
-    let loadCountCmd =
-        Cmd.ofAsync
-            Server.api.rename
-            3
-            (Ok >> RenameLoaded)
-            (Error >> RenameLoaded)
-    initialModel, loadCountCmd
+    let initialModel = {       
+        Candidates = List.init 10 (fun i -> {Id = i; Status = Offered; Representatives = []});
+        CurrentExpansion = None;
+        PendingAjax = false }
+
+    initialModel, Cmd.none
 
 
 
@@ -92,10 +87,20 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         {currentModel with PendingAjax = true}, Cmd.none
     | _ , AjaxArrived ->
         {currentModel with PendingAjax = false}, Cmd.none
-    | _, RenameLoaded (Ok newName) ->
-        {currentModel with Rename = Some newName }, Cmd.ofMsg AjaxArrived
-    | _, Rename idx ->
-        currentModel, ajax Server.api.rename 1 RenameLoaded
+    | _, CloseModal ->
+        {currentModel with CurrentExpansion = None}, Cmd.none
+    | _, FreshDataArrived (Ok(cand)) ->
+        {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c)  }, Cmd.ofMsg AjaxArrived
+    | _, ExpansionArrived (Ok(expansion)) ->
+        {currentModel with CurrentExpansion = Some expansion}, Cmd.ofMsg AjaxArrived
+    | _, Reject(cand) ->
+        let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
+        currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = reason} FreshDataArrived
+     | _, Expand(cand) ->       
+        currentModel, ajax Server.api.expandCandidate  cand ExpansionArrived
+    | _, AcceptTill(cand,n) ->
+        let newName = promptDialog("Please provide a new name for discovered visual attribute","Flower pattern")
+        currentModel, ajax Server.api.acceptNewAttribute  {Candidate = cand; NewName = newName; AcceptedMatches = [n]} FreshDataArrived
     | _ -> currentModel, Cmd.none
 
 
@@ -135,8 +140,40 @@ let hero =
                       [ str "Hello, Admin." ]
                    ] ] ]
 
+let shortStatusName  = function
+    | Offered -> "Offered"
+    | Accepted(date,name) -> "Accepted:" + name
+    | Rejected(date,reason) ->"Rejected"
+
+let statusColor  = function
+    | Offered -> []
+    | Accepted(date,name) -> [ ClassName "has-background-success"]
+    | Rejected(date,reason) -> [ ClassName "has-background-grey" ]
+
+let statusOrder  = function
+    | Offered -> 1
+    | Accepted(date,name) -> 0
+    | Rejected(date,reason) -> 2
 
 
+let expandedModal (model: Model) (dispatch: Msg -> unit) =
+    match model.CurrentExpansion with
+    | None -> br[]
+    | Some(expansion) ->
+        Modal.modal
+            [Modal.IsActive true]
+            [
+                Modal.background [ Props [ OnClick (fun _ -> dispatch CloseModal) ] ] [ ]
+                Modal.content [ ]
+                    [
+                        Box.box' [ ] [str (sprintf "%A" expansion)]                        
+                    ]
+                Modal.close
+                    [
+                        Modal.Close.Size IsLarge
+                        Modal.Close.OnClick (fun _ -> dispatch CloseModal)
+                    ][ ]
+            ]    
 
 let columns (model : Model) (dispatch : Msg -> unit) =
             let smallButton name message color =
@@ -148,10 +185,6 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                           ]
                           [str name]
 
-            let namingFunc idx =
-                match model.Rename with                
-                | Some(record) when record.Id = idx -> record.NewName
-                | _ -> "Lorem ipsum g"
 
             Card.card [ CustomClass "list-card" ]
                 [ Card.header [ ]
@@ -165,39 +198,27 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                 Table.IsNarrow
                                 Table.IsStriped ]
                               [ tbody [ ]
-                                  [ for idx in 1..model.TableItems ->
-                                      tr [ ]
+                                  [ for c in model.Candidates |> Seq.sortBy (fun c -> c.Status |> statusOrder) ->
+                                      tr (statusColor(c.Status) |> Seq.cast<IHTMLProp>)
                                           [ 
                                             td [ ]                                                
-                                                [ 
-                                                    smallButton "Expand" (Rename idx) IsPrimary
+                                                [
+                                                    str(sprintf "%i= %s" c.Id (c.Status |> shortStatusName))
                                                     br []
-                                                    smallButton "Approve" (Rename idx) IsSuccess
+                                                    smallButton "Expand" (Expand(c) ) IsPrimary
                                                     br []
-                                                    smallButton "Reject" (Rename idx) IsDanger
+                                                    smallButton "Approve" (AcceptTill(c,(ImageId "132",0.0))) IsSuccess
+                                                    br []
+                                                    smallButton "Reject" (Reject(c)) IsDanger
                                                 ] 
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]   
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ];  smallButton "Accept until d= 0.375" (Rename idx) IsSuccess ]
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ];  smallButton "Accept until d= 0.375" (AjaxArrived) IsSuccess ]
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]                                           
 
-                                           ] ] ] ];                         
-                            Table.table
-                              [ Table.IsFullWidth
-                                Table.IsStriped ]
-                              [ tbody [ ]
-                                  [ for idx in 1..model.TableItems ->
-                                      tr [ ]
-                                          [ td [ ]
-                                                [ str ( namingFunc idx) ]
-                                            td [ ]
-                                                [ Button.a
-                                                    [ Button.Size IsSmall
-                                                      Button.Color IsPrimary
-                                                      Button.OnClick (fun _ -> dispatch (Rename idx)) ]
-                                                    [ str "Random name" ] ] ] ] ] 
+                                           ] ] ] ] 
                       ]
                   Card.footer [ ]
                       [ Card.Footer.div [ ]
@@ -214,7 +235,8 @@ let view (model : Model) (dispatch : Msg -> unit) =
                     Column.column [ Column.Width ( Screen.All , Column.Is12) ]
                       [ breadcrump
                         hero                      
-                        columns model dispatch ] ] ] ]
+                        columns model dispatch
+                        expandedModal model dispatch] ] ] ]
 
 #if DEBUG
 open Elmish.Debug

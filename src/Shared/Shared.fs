@@ -2,8 +2,8 @@ namespace Shared
 
 open System
 
-type Image = Name of int
-type Patch = Name of int
+type Image = ImageId of string
+type Patch = PatchId of string
 type ImagePatch = Image * Patch
 type Neighbor = Image * float
 type TextAttribute = Text of string
@@ -19,7 +19,6 @@ type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor 
 type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string}
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
 
-type Rename = {NewName : string; Id : int}
 
 module Route =
     /// Defines how routes are generated on server and mapped from client
@@ -29,10 +28,9 @@ module Route =
 /// A type that specifies the communication protocol between client and server
 /// to learn more, read the docs at https://zaid-ajaj.github.io/Fable.Remoting/src/basics.html
 type ICounterApi =
-    { 
-        rename : int -> Async<Rename>;
+    {       
         load : unit -> Async<InitialDisplay>;
-        //expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
-        //acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
-        //rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
+        expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
+        acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
+        rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
     }

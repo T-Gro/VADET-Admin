@@ -17,12 +17,24 @@ let publicPath = Path.GetFullPath "../Client/public"
 
 let port = "SERVER_PORT" |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
 
-let rename idx = task {return {NewName = String.replicate 10 (string idx); Id = idx}} 
-let load () = task{return {Candidates = Map.empty}} 
+let load () = task{return {Candidates = Map.empty}}
+let reject (rejection:RejectionOfAttribute) = task {
+    return {
+                rejection.Subject with Status = Rejected(System.DateTime.UtcNow, rejection.Reason)                
+            }}
 
-let counterApi = {   
-    rename = rename >> Async.AwaitTask;
-    load = load >> Async.AwaitTask
+let accept (acc:AcceptedAttribute) = task {
+    return {
+                acc.Candidate with Status = Accepted(System.DateTime.UtcNow, acc.NewName)                
+            }}
+
+let expand cand = task {return {Candidate = cand; Neighbors = []}}
+
+let counterApi = {      
+    load = load >> Async.AwaitTask;
+    rejectOfferedAttribute = reject >> Async.AwaitTask;
+    acceptNewAttribute = accept >> Async.AwaitTask;
+    expandCandidate = expand >> Async.AwaitTask
 }
 
 let webApp =
