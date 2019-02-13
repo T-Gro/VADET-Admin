@@ -11,6 +11,7 @@ open Shared
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 
+let rnd = new System.Random()
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 
 let publicPath = Path.GetFullPath "../Client/public"
@@ -28,7 +29,10 @@ let accept (acc:AcceptedAttribute) = task {
                 acc.Candidate with Status = Accepted(System.DateTime.UtcNow, acc.NewName)                
             }}
 
-let expand cand = task {return {Candidate = cand; Neighbors = []}}
+let expand cand = task {
+        return {
+              Candidate = cand;
+              Neighbors = List.init (rnd.Next(5,70)) (fun i -> {Hit = ImageId (i|>string); Distance =float i / 100.0; Accepted = false})}}
 
 let counterApi = {      
     load = load >> Async.AwaitTask;

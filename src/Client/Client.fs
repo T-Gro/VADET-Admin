@@ -82,7 +82,7 @@ let ajax call arguments resultMessage =
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
-    match currentModel, msg with
+    match currentModel.CurrentExpansion, msg with
     | _ ,FireAjax ->
         {currentModel with PendingAjax = true}, Cmd.none
     | _ , AjaxArrived ->
@@ -90,7 +90,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, CloseModal ->
         {currentModel with CurrentExpansion = None}, Cmd.none
     | _, FreshDataArrived (Ok(cand)) ->
-        {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c)  }, Cmd.ofMsg AjaxArrived
+        {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c); CurrentExpansion = None  }, Cmd.ofMsg AjaxArrived
     | _, ExpansionArrived (Ok(expansion)) ->
         {currentModel with CurrentExpansion = Some expansion}, Cmd.ofMsg AjaxArrived
     | _, Reject(cand) ->
@@ -98,9 +98,18 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = reason} FreshDataArrived
      | _, Expand(cand) ->       
         currentModel, ajax Server.api.expandCandidate  cand ExpansionArrived
-    | _, AcceptTill(cand,n) ->
+    | Some(exp), AcceptTill(cand,pickedN)   ->
         let newName = promptDialog("Please provide a new name for discovered visual attribute","Flower pattern")
-        currentModel, ajax Server.api.acceptNewAttribute  {Candidate = cand; NewName = newName; AcceptedMatches = [n]} FreshDataArrived
+        let filteredKnn =
+            exp.Neighbors
+            |> List.takeWhile (fun nn -> nn <> pickedN)
+            |> List.append [pickedN]
+            |> List.map (fun nn -> {nn with Accepted = true})
+        {currentModel with CurrentExpansion = Some {exp with Neighbors = filteredKnn}}, ajax Server.api.acceptNewAttribute  {
+            Candidate = cand;
+            NewName = newName;
+            AcceptedMatches = filteredKnn
+        } FreshDataArrived
     | _ -> currentModel, Cmd.none
 
 
@@ -141,32 +150,51 @@ let hero =
                    ] ] ]
 
 let shortStatusName  = function
-    | Offered -> "Offered"
-    | Accepted(date,name) -> "Accepted:" + name
-    | Rejected(date,reason) ->"Rejected"
+    | Offered -> str("Offered")
+    | Accepted(_,name) -> span [] [str("Accepted");br[];str(name)]
+    | Rejected(_,_) -> str("Rejected")
 
 let statusColor  = function
     | Offered -> []
-    | Accepted(date,name) -> [ ClassName "has-background-success"]
-    | Rejected(date,reason) -> [ ClassName "has-background-grey" ]
+    | Accepted(_,_) -> [ ClassName "has-background-success"]
+    | Rejected(_,_) -> [ ClassName "has-background-grey" ]
 
 let statusOrder  = function
     | Offered -> 1
-    | Accepted(date,name) -> 0
-    | Rejected(date,reason) -> 2
+    | Accepted(_,_) -> 0
+    | Rejected(_,_) -> 2
+
 
 
 let expandedModal (model: Model) (dispatch: Msg -> unit) =
+
+
     match model.CurrentExpansion with
     | None -> br[]
     | Some(expansion) ->
+        let renderNeighbour (n: Neighbor) =
+                a
+                    [
+                        OnClick (fun _ -> dispatch (AcceptTill(expansion.Candidate,n)))
+                        Title (sprintf "Distance = %f. Click to accept as an attribute assigned to all objects until this neighbour." n.Distance)
+                    ]
+                    [                        
+                        img [
+                                yield Src "https://dummyimage.com/128x128/7a7a7a/fff";
+                                if n.Accepted then yield ClassName "blink";
+                            ]
+                    ]
+
         Modal.modal
             [Modal.IsActive true]
             [
                 Modal.background [ Props [ OnClick (fun _ -> dispatch CloseModal) ] ] [ ]
-                Modal.content [ ]
+                Modal.content [  GenericOption.Props [Style[ Width "85%"]]  ]
                     [
-                        Box.box' [ ] [str (sprintf "%A" expansion)]                        
+                        Box.box'
+                            []
+                            (expansion.Neighbors |> List.map renderNeighbour)
+                        
                     ]
                 Modal.close
                     [
@@ -203,18 +231,16 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                           [ 
                                             td [ ]                                                
                                                 [
-                                                    str(sprintf "%i= %s" c.Id (c.Status |> shortStatusName))
-                                                    br []
-                                                    smallButton "Expand" (Expand(c) ) IsPrimary
-                                                    br []
-                                                    smallButton "Approve" (AcceptTill(c,(ImageId "132",0.0))) IsSuccess
-                                                    br []
-                                                    smallButton "Reject" (Reject(c)) IsDanger
+                                                    yield shortStatusName(c.Status);
+                                                    yield br [];
+                                                    yield smallButton "Expand" (Expand(c) ) IsPrimary;
+                                                    yield br [];                                                   
+                                                    if c.Status = Offered then
+                                                        yield smallButton "Reject" (Reject(c)) IsDanger
                                                 ] 
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]   
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ];  smallButton "Accept until d= 0.375" (AjaxArrived) IsSuccess ]
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]                                               
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
                                             td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]                                           
 

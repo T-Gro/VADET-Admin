@@ -10,6 +10,18 @@
     <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 
     <link rel="shortcut icon" type="image/png" href="/favicon.png"/>
+	<style>
+.blink {
+    -webkit-animation: blink 0.5s step-end infinite;
+    -moz-animation: blink 0.5s step-end infinite;
+    -o-animation: blink 0.5s step-end infinite;
+    animation: blink 0.5s step-end infinite;
+}
+@-webkit-keyframes blink { 67% { opacity: 0 }}
+@-moz-keyframes blink {  67% { opacity: 0 }}
+@-o-keyframes blink {  67% { opacity: 0 }}
+@keyframes blink {  67% { opacity: 0 }}
+	</style>
 </head>
 <body>
     <div id="elmish-app"></div>
