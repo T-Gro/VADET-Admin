@@ -45,7 +45,7 @@ type Msg =
 | Reject of AttributeCandidate
 | Expand  of AttributeCandidate
 | AcceptTill of AttributeCandidate * Neighbor
-| ExpansionArrived of AttributeExpansion
+| ExpansionArrived of Result<AttributeExpansion,exn>
 | FireAjax
 | AjaxArrived
 
@@ -74,6 +74,15 @@ let init () : Model * Cmd<Msg> =
 
 
 
+let ajax call arguments resultMessage =
+    let serverCall = 
+       Cmd.ofAsync
+        call
+        arguments
+        (Ok >> resultMessage)
+        (Error >> resultMessage)
+    Cmd.batch [Cmd.ofMsg FireAjax; serverCall]
+
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
@@ -86,17 +95,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, RenameLoaded (Ok newName) ->
         {currentModel with Rename = Some newName }, Cmd.ofMsg AjaxArrived
     | _, Rename idx ->
-        let serverCallCmd =
-            Cmd.ofAsync
-                Server.api.rename
-                idx
-                (Ok >> RenameLoaded)
-                (Error >> RenameLoaded)
-        currentModel, Cmd.batch  [Cmd.ofMsg FireAjax; serverCallCmd]
+        currentModel, ajax Server.api.rename 1 RenameLoaded
     | _ -> currentModel, Cmd.none
-
-
-
 
 
 let navBrand =
@@ -139,6 +139,15 @@ let hero =
 
 
 let columns (model : Model) (dispatch : Msg -> unit) =
+            let smallButton name message color =
+                Button.a [
+                            Button.Size IsSmall
+                            Button.Color color
+                            Button.OnClick (fun _ -> dispatch message)
+                            Button.IsLoading model.PendingAjax
+                          ]
+                          [str name]
+
             let namingFunc idx =
                 match model.Rename with                
                 | Some(record) when record.Id = idx -> record.NewName
@@ -152,21 +161,29 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                   div [ Class "card-table" ]
                       [ Content.content [ ]
                           [ Table.table
-                              [ Table.IsFullWidth
+                              [ Table.IsBordered
+                                Table.IsNarrow
                                 Table.IsStriped ]
                               [ tbody [ ]
                                   [ for idx in 1..model.TableItems ->
                                       tr [ ]
-                                          [ td [ ]
-                                                [ str ( namingFunc idx) ]
-                                            td [ ]
-                                                [ Button.a
-                                                    [ Button.Size IsSmall
-                                                      Button.Color IsPrimary
-                                                      Button.OnClick (fun _ -> dispatch (Rename idx)) ]
-                                                    [ str "Random name" ] ] ] ] ] ];
-                            div [] [str "Blax"];
-                            div [] [str "Blux"];
+                                          [ 
+                                            td [ ]                                                
+                                                [ 
+                                                    smallButton "Expand" (Rename idx) IsPrimary
+                                                    br []
+                                                    smallButton "Approve" (Rename idx) IsSuccess
+                                                    br []
+                                                    smallButton "Reject" (Rename idx) IsDanger
+                                                ] 
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]   
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ];  smallButton "Accept until d= 0.375" (Rename idx) IsSuccess ]
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
+                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]                                           
+
+                                           ] ] ] ];                         
                             Table.table
                               [ Table.IsFullWidth
                                 Table.IsStriped ]
