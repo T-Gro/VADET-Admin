@@ -45,6 +45,7 @@ type Msg =
 | FireAjax
 | AjaxArrived
 | CloseModal
+| InitialisationArrived of Result<InitialDisplay,exn>
 
 module Server =
 
@@ -58,15 +59,6 @@ module Server =
       |> Remoting.buildProxy<ICounterApi>
 
  
-// defines the initial state and initial command (= side-effect) of the application
-let init () : Model * Cmd<Msg> =
-    let initialModel = {       
-        Candidates = List.init 10 (fun i -> {Id = i; Status = Offered; Representatives = []});
-        CurrentExpansion = None;
-        PendingAjax = false }
-
-    initialModel, Cmd.none
-
 
 
 let ajax call arguments resultMessage =
@@ -77,6 +69,16 @@ let ajax call arguments resultMessage =
         (Ok >> resultMessage)
         (Error >> resultMessage)
     Cmd.batch [Cmd.ofMsg FireAjax; serverCall]
+
+// defines the initial state and initial command (= side-effect) of the application
+let init () : Model * Cmd<Msg> =
+    let initialModel = {       
+        Candidates = [];
+        CurrentExpansion = None;
+        PendingAjax = false }
+
+    let cmd =  ajax  Server.api.load () InitialisationArrived
+    initialModel, cmd
 
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
@@ -89,13 +91,15 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         {currentModel with PendingAjax = false}, Cmd.none
     | _, CloseModal ->
         {currentModel with CurrentExpansion = None}, Cmd.none
+    | _, InitialisationArrived (Ok(init)) ->
+        {currentModel with Candidates = init.Candidates}, Cmd.ofMsg AjaxArrived
     | _, FreshDataArrived (Ok(cand)) ->
         {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c); CurrentExpansion = None  }, Cmd.ofMsg AjaxArrived
     | _, ExpansionArrived (Ok(expansion)) ->
         {currentModel with CurrentExpansion = Some expansion}, Cmd.ofMsg AjaxArrived
     | _, Reject(cand) ->
-        let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
-        currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = reason} FreshDataArrived
+        //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
+        currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"} FreshDataArrived
      | _, Expand(cand) ->       
         currentModel, ajax Server.api.expandCandidate  cand ExpansionArrived
     | Some(exp), AcceptTill(cand,pickedN)   ->
@@ -155,16 +159,17 @@ let shortStatusName  = function
     | Rejected(_,_) -> str("Rejected")
 
 let statusColor  = function
-    | Offered -> []
+    | Offered -> [ClassName "has-background-grey"]
     | Accepted(_,_) -> [ ClassName "has-background-success"]
-    | Rejected(_,_) -> [ ClassName "has-background-grey" ]
+    | Rejected(_,_) -> [ ClassName "has-background-danger" ]
 
 let statusOrder  = function
     | Offered -> 1
     | Accepted(_,_) -> 0
     | Rejected(_,_) -> 2
 
-
+let extractImgId (ImageId x) = x
+let extractPatchId (PatchId x) = x
 
 let expandedModal (model: Model) (dispatch: Msg -> unit) =
 
@@ -203,6 +208,41 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                     ][ ]
             ]    
 
+let renderCandidate (c:AttributeCandidate) (smallButton) =
+  tr (statusColor(c.Status) |> Seq.cast<IHTMLProp>)
+    [ 
+    yield td [ ]                                                
+        [
+            yield shortStatusName(c.Status);
+            yield br [];
+            yield smallButton "Expand" (Expand(c) ) IsPrimary;
+            yield br [];                                                   
+            if c.Status = Offered then
+                yield smallButton "Reject" (Reject(c)) IsDanger
+        ];
+    for (i,patches) in c.Representatives |> List.groupBy fst do                                                
+        yield td [ ] [
+            Image.image [ Image.Is128x128 ] [
+                div [ClassName("img-container")] [
+                   yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-cropped/"+ extractImgId i) ]
+                   for (i,p) in patches |> Seq.distinct do
+                    let patchId = extractPatchId p
+                    let coordParts = patchId.Split([|'_';'@'|])
+                    let position = int32 coordParts.[1]
+                    if coordParts.[0] = "6x8" then
+                        let row = float(position / 6) * (100.0/8.0)
+                        let column = float(position % 6) * (100.0/6.0)
+                        let asPercent = sprintf "%.2f%%"
+                        yield span [ClassName("is6x8 marker"); Style[CSSProp.Top(row |> asPercent); CSSProp.Left(column |> asPercent)]] []
+                    if coordParts.[0] = "3x4" then
+                        let row = float(position / 3) * (100.0/4.0)
+                        let column = float(position % 3) * (100.0/3.0)
+                        let asPercent = sprintf "%.2f%%"
+                        yield span [ClassName("is3x4 marker"); Style[CSSProp.Top(row |> asPercent); CSSProp.Left(column |> asPercent)]] []
+                ]]];
+
+    ]
+     
 let columns (model : Model) (dispatch : Msg -> unit) =
             let smallButton name message color =
                 Button.a [
@@ -226,25 +266,8 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                 Table.IsNarrow
                                 Table.IsStriped ]
                               [ tbody [ ]
-                                  [ for c in model.Candidates |> Seq.sortBy (fun c -> c.Status |> statusOrder) ->
-                                      tr (statusColor(c.Status) |> Seq.cast<IHTMLProp>)
-                                          [ 
-                                            td [ ]                                                
-                                                [
-                                                    yield shortStatusName(c.Status);
-                                                    yield br [];
-                                                    yield smallButton "Expand" (Expand(c) ) IsPrimary;
-                                                    yield br [];                                                   
-                                                    if c.Status = Offered then
-                                                        yield smallButton "Reject" (Reject(c)) IsDanger
-                                                ] 
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]                                               
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]
-                                            td [ ] [Image.image [ Image.Is128x128 ] [ img [ Src "https://dummyimage.com/128x128/7a7a7a/fff" ] ]]                                           
-
-                                           ] ] ] ] 
+                                  [ for c in model.Candidates  ->
+                                      renderCandidate c smallButton ] ] ] 
                       ]
                   Card.footer [ ]
                       [ Card.Footer.div [ ]

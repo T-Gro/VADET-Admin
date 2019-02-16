@@ -13,7 +13,7 @@ type AttributeStatus =
     |Rejected of DateTime * string
     |Accepted of DateTime * string
 type AttributeCandidate = {Id : int; Representatives : ImagePatch list; Status : AttributeStatus}
-type InitialDisplay = {Candidates : Map<int,AttributeCandidate>}
+type InitialDisplay = {Candidates : AttributeCandidate list}
 type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string}
 type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list}
 type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string}

@@ -2,3 +2,5 @@ group Server
     FSharp.Core
     Saturn
     Fable.Remoting.Giraffe
+	protobuf-net
+	System.Configuration.ConfigurationManager

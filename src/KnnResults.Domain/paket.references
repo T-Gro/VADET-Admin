@@ -1,0 +1,2 @@
+group Server
+	protobuf-net

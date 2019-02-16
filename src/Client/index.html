@@ -1,7 +1,7 @@
 ﻿<!doctype html>
 <html>
 <head>
-    <title>SAFE Template</title>
+    <title>VADET Admin</title>
     <meta charset="utf-8">
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,7 +21,37 @@
 @-moz-keyframes blink {  67% { opacity: 0 }}
 @-o-keyframes blink {  67% { opacity: 0 }}
 @keyframes blink {  67% { opacity: 0 }}
-	</style>
+
+.is-128x128 .img-container{
+	display: inline-block;
+	vertical-align: middle;
+	position: relative
+}
+
+.is-128x128 .img-container img{	
+	vertical-align: middle;
+	max-height: 128px;
+	width: auto;
+}
+
+.marker{
+	position: absolute;
+	border: 2px dotted red;
+	margin-left: -2px;
+	margin-top: -2px;
+}
+
+.is3x4{
+	width: 33.333%;
+	height: 25%;
+}
+
+.is6x8{
+	width: 16.666%;
+	height: 12.5%;	
+}
+
+</style>
 </head>
 <body>
     <div id="elmish-app"></div>
