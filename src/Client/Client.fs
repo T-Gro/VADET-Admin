@@ -46,6 +46,7 @@ type Msg =
 | AjaxArrived
 | CloseModal
 | InitialisationArrived of Result<InitialDisplay,exn>
+| SkipNeighbour of Neighbor
 
 module Server =
 
@@ -100,6 +101,10 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, Reject(cand) ->
         //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
         currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"} FreshDataArrived
+    | _, SkipNeighbour(n) ->
+        let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png")}
+        let exp = currentModel.CurrentExpansion |> Option.map (fun exp -> {exp with Neighbors = exp.Neighbors |> List.map (fun nn -> if nn <> n then nn else emptyN)})
+        {currentModel with CurrentExpansion =  exp }, Cmd.none
      | _, Expand(cand) ->       
         currentModel, ajax Server.api.expandCandidate  cand ExpansionArrived
     | Some(exp), AcceptTill(cand,pickedN)   ->
@@ -149,8 +154,10 @@ let hero =
                 Hero.CustomClass "welcome" ]
         [ Hero.body [ ]
             [ Container.container [ Container.IsFluid  ]
-                [ Heading.h3 [ ]
-                      [ str "Hello, Admin." ]
+                [
+                    Heading.h3 [ ]  [ str "Hello, Admin." ]
+                    p [] [str "Expand an attribute to see how it applies to the data-set."]
+                    p [] [str "After expansion, right-click to reject a selected neighbour, and left-click to apply as an attribute to all items up to the selected one."]
                    ] ] ]
 
 let shortStatusName  = function
@@ -171,23 +178,39 @@ let statusOrder  = function
 let extractImgId (ImageId x) = x
 let extractPatchId (PatchId x) = x
 
+let renderImageWithPatches image patches =
+    div [ClassName("img-container")] [
+        yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-cropped/"+ extractImgId image) ]
+        for p in patches |> Seq.distinct do
+        let patchId = extractPatchId p
+        let coordParts = patchId.Split([|'_';'@'|])
+        let position = int32 coordParts.[1]
+        if coordParts.[0] = "6x8" then
+            let row = float(position / 6) * (100.0/8.0)
+            let column = float(position % 6) * (100.0/6.0)
+            let asPercent = sprintf "%.2f%%"
+            yield span [ClassName("is6x8 marker"); Style[CSSProp.Top(row |> asPercent); CSSProp.Left(column |> asPercent)]] []
+        if coordParts.[0] = "3x4" then
+            let row = float(position / 3) * (100.0/4.0)
+            let column = float(position % 3) * (100.0/3.0)
+            let asPercent = sprintf "%.2f%%"
+            yield span [ClassName("is3x4 marker"); Style[CSSProp.Top(row |> asPercent); CSSProp.Left(column |> asPercent)]] []
+    ]  
+
 let expandedModal (model: Model) (dispatch: Msg -> unit) =
-
-
     match model.CurrentExpansion with
     | None -> br[]
     | Some(expansion) ->
         let renderNeighbour (n: Neighbor) =
                 a
                     [
-                        OnClick (fun _ -> dispatch (AcceptTill(expansion.Candidate,n)))
-                        Title (sprintf "Distance = %f. Click to accept as an attribute assigned to all objects until this neighbour." n.Distance)
+                        yield OnClick (fun _ -> dispatch (AcceptTill(expansion.Candidate,n)))
+                        yield OnContextMenu (fun me -> dispatch (SkipNeighbour(n)); me.preventDefault())                      
+                        yield Title (sprintf "Distance = %f. Left-click to accept as an attribute assigned to all objects until this neighbour. Right-click to skip a selected neighbour." n.Distance)
+                        if n.Accepted then yield ClassName "blink"
                     ]
-                    [                        
-                        img [
-                                yield Src "https://dummyimage.com/128x128/7a7a7a/fff";
-                                if n.Accepted then yield ClassName "blink";
-                            ]
+                    [
+                        Image.image [ Image.Is128x128 ] [renderImageWithPatches n.Hit n.Patches]                    
                     ]
 
         Modal.modal
@@ -222,24 +245,7 @@ let renderCandidate (c:AttributeCandidate) (smallButton) =
         ];
     for (i,patches) in c.Representatives |> List.groupBy fst do                                                
         yield td [ ] [
-            Image.image [ Image.Is128x128 ] [
-                div [ClassName("img-container")] [
-                   yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-cropped/"+ extractImgId i) ]
-                   for (i,p) in patches |> Seq.distinct do
-                    let patchId = extractPatchId p
-                    let coordParts = patchId.Split([|'_';'@'|])
-                    let position = int32 coordParts.[1]
-                    if coordParts.[0] = "6x8" then
-                        let row = float(position / 6) * (100.0/8.0)
-                        let column = float(position % 6) * (100.0/6.0)
-                        let asPercent = sprintf "%.2f%%"
-                        yield span [ClassName("is6x8 marker"); Style[CSSProp.Top(row |> asPercent); CSSProp.Left(column |> asPercent)]] []
-                    if coordParts.[0] = "3x4" then
-                        let row = float(position / 3) * (100.0/4.0)
-                        let column = float(position % 3) * (100.0/3.0)
-                        let asPercent = sprintf "%.2f%%"
-                        yield span [ClassName("is3x4 marker"); Style[CSSProp.Top(row |> asPercent); CSSProp.Left(column |> asPercent)]] []
-                ]]];
+            Image.image [ Image.Is128x128 ] [ renderImageWithPatches i (patches |> Seq.map snd) ]];
 
     ]
      

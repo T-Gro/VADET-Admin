@@ -5,7 +5,7 @@ open System
 type Image = ImageId of string
 type Patch = PatchId of string
 type ImagePatch = Image * Patch
-type Neighbor = {Hit:Image;Distance:float;Accepted:bool}
+type Neighbor = {Hit:Image;Distance:float32;Accepted:bool; Patches: Patch list}
 type TextAttribute = Text of string
 type AttributeCorrelation = {Attribute : TextAttribute; Correlation : float}
 type AttributeStatus = 
