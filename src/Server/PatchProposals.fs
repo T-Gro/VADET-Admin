@@ -47,6 +47,8 @@ module PatchProposals
 
         let combinedResults = ac.Representatives |> List.map queryResults
         let allFoundImages = combinedResults |> Seq.map (fun (_,_,found,_) -> found) |> Set.unionMany
+        let withAvgDistance = allFoundImages |> Seq.map(fun img -> (img, combinedResults |> List.averageBy (fun (gd,_,_,_) -> gd img)))
+        let bestPicks = withAvgDistance |> Seq.sortBy snd
 
         let relevantReprs = ac.Representatives |> Seq.take 1
         let knn =
