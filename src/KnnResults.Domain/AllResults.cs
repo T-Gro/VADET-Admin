@@ -27,6 +27,5 @@ namespace KnnResults.Domain
                 return Serializer.Deserialize<AllResults>(file);
             }
         }
-
     }
 }
