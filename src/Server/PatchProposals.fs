@@ -33,8 +33,6 @@ module PatchProposals
 
     let findHits (ImageId(i),PatchId(p)) = OverallDataAccessor.FindHitsInBigFile(i,p) |> Seq.toArray
 
-
-    type QueryResultPair = {Query : ImagePatch; FoundHit : NamedHit}
     let expand (ac : AttributeCandidate) =
         let queryResults c =
             let knn = findHits c
@@ -48,25 +46,26 @@ module PatchProposals
         let combinedResults = ac.Representatives |> List.map queryResults
         let allFoundImages = combinedResults |> Seq.map (fun (_,_,found,_) -> found) |> Set.unionMany
         let withAvgDistance = allFoundImages |> Seq.map(fun img -> (img, combinedResults |> List.averageBy (fun (gd,_,_,_) -> gd img)))
-        let bestPicks = withAvgDistance |> Seq.sortBy snd
+        let findAllPatches img =
+            combinedResults
+            |> List.map (fun (_,bil,_,_) -> bil.TryFind img)
+            |> List.choose id
+            |> Seq.collect id
+            |> Seq.map (fun x -> PatchId x.Patch)
+            |> Seq.distinct
+            |> List.ofSeq
 
-        let relevantReprs = ac.Representatives |> Seq.take 1
-        let knn =
-            relevantReprs
-            |> Seq.map findHits
-            |> Seq.zip relevantReprs
-            |> Seq.collect (fun (cand,hits) -> hits |> Seq.map (fun h -> {Query = cand; FoundHit = h}))
-            |> Seq.groupBy (fun h -> h.FoundHit.Img)
-            |> Seq.sortBy (fun (key,g) -> (g |> Seq.minBy (fun qrp -> qrp.FoundHit.Distance)).FoundHit.Distance )
-
-        let neighbours =
-            knn
-            |> Seq.map (fun (img,allPatches) -> {
+        let bestPicks =
+            withAvgDistance
+            |> Seq.sortBy snd
+            |> Seq.truncate 512
+            |> Seq.map (fun (img,dist) -> {
                 Accepted = false;
-                Patches = (allPatches |> Seq.map (fun qrp -> PatchId(qrp.FoundHit.Patch)) |> List.ofSeq);
+                Patches = findAllPatches img;
                 Hit = ImageId(img);
-                Distance = (allPatches |> Seq.minBy (fun qrp -> qrp.FoundHit.Distance)).FoundHit.Distance
-               } )
-        neighbours |> List.ofSeq
+                Distance = dist
+            })
+    
+        bestPicks |> List.ofSeq
         
         
