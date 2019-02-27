@@ -25,6 +25,14 @@ module Route =
     let builder typeName methodName =
         sprintf "/api/%s/%s" typeName methodName
 
+    let modifier =
+#if DEBUG
+        ""
+#else
+        "/vadet-admin"
+#endif
+    let clientBuilder a b = modifier + builder a b
+
 /// A type that specifies the communication protocol between client and server
 /// to learn more, read the docs at https://zaid-ajaj.github.io/Fable.Remoting/src/basics.html
 type ICounterApi =
