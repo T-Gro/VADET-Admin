@@ -277,7 +277,7 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                       ]
                   Card.footer [ ]
                       [ Card.Footer.div [ ]
-                          [ str "View All" ] ] ]
+                          [ ] ] ]
           
             
 
