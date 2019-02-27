@@ -22,7 +22,8 @@ let accept (acc:AcceptedAttribute) = task {
 let expand cand = task {
         return {
               Candidate = cand;
-              Neighbors = PatchProposals.expand cand }}
+              Neighbors = PatchProposals.expand cand;
+              IgnoredCategories = []}}
 
 let counterApi = {      
     load = load >> Async.AwaitTask;

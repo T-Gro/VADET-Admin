@@ -47,6 +47,7 @@ type Msg =
 | CloseModal
 | InitialisationArrived of Result<InitialDisplay,exn>
 | SkipNeighbour of Neighbor
+| ToggleIgnore of string
 
 module Server =
 
@@ -102,11 +103,14 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
         currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"} FreshDataArrived
     | _, SkipNeighbour(n) ->
-        let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png")}
+        let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png"); Categories = []}
         let exp = currentModel.CurrentExpansion |> Option.map (fun exp -> {exp with Neighbors = exp.Neighbors |> List.map (fun nn -> if nn <> n then nn else emptyN)})
         {currentModel with CurrentExpansion =  exp }, Cmd.none
      | _, Expand(cand) ->       
         currentModel, ajax Server.api.expandCandidate  cand ExpansionArrived
+    | Some(exp), ToggleIgnore(cat) ->
+        let ignoreSet = if exp.IgnoredCategories|> List.contains cat then exp.IgnoredCategories |> List.filter (fun ic -> ic <> cat) else cat :: exp.IgnoredCategories
+        {currentModel with CurrentExpansion = Some {exp with IgnoredCategories = ignoreSet}}, Cmd.none
     | Some(exp), AcceptTill(cand,pickedN)   ->
         let newName = promptDialog("Please provide a new name for discovered visual attribute","Flower pattern")
         let filteredKnn =
@@ -201,6 +205,16 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
     match model.CurrentExpansion with
     | None -> br[]
     | Some(expansion) ->
+        let allCategories =
+            expansion.Neighbors
+            |> List.collect (fun x -> x.Categories)
+            |> List.groupBy id
+            |> List.map (fun (key, g) -> (key, g |> List.length ) )
+            |> List.sortByDescending snd
+            |> List.map (fun (cat,count) ->
+                Button.button
+                    [Button.Color (if expansion.IgnoredCategories |> List.contains cat then IsWarning else IsSuccess); Button.OnClick (fun _ -> dispatch (ToggleIgnore(cat)) ); Button.Size IsSmall ]
+                    [str (sprintf "%s (%ix)" cat count)])
         let renderNeighbour (n: Neighbor) =
                 a
                     [
@@ -221,7 +235,14 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                     [
                         Box.box'
                             []
-                            (expansion.Neighbors |> List.map renderNeighbour)
+                            [
+                                yield! allCategories;
+                                yield (br []);
+                                yield! (
+                                    expansion.Neighbors
+                                    |> List.filter (fun n -> expansion.IgnoredCategories |> List.exists (fun ic -> n.Categories |> List.contains ic) |> not)
+                                    |> List.map renderNeighbour);
+                            ]
                         
                     ]
                 Modal.close

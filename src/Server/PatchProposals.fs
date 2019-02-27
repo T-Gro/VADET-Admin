@@ -63,7 +63,8 @@ module PatchProposals
                 Accepted = false;
                 Patches = findAllPatches img;
                 Hit = ImageId(img);
-                Distance = dist
+                Distance = dist;
+                Categories = ZootLabels.Get(img).AllCategories |> List.ofArray
             })
     
         bestPicks |> List.ofSeq
