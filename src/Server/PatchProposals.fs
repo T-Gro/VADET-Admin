@@ -28,7 +28,7 @@ module PatchProposals
             |> Seq.rev
             |> Seq.map createCandidate
             |> Seq.filter (fun c -> c.Status = Offered)
-            |> Seq.take 200
+            |> Seq.truncate 50
         firstItems  |> List.ofSeq
 
     let findHits (ImageId(i),PatchId(p)) = OverallDataAccessor.FindHitsInBigFile(i,p) |> Seq.toArray
@@ -58,7 +58,7 @@ module PatchProposals
         let bestPicks =
             withAvgDistance
             |> Seq.sortBy snd
-            |> Seq.truncate 512
+            |> Seq.truncate 256
             |> Seq.map (fun (img,dist) -> {
                 Accepted = false;
                 Patches = findAllPatches img;
