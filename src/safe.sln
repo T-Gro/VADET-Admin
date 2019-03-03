@@ -7,7 +7,9 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Client", "Client\Client.fsp
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Server", "Server\Server.fsproj", "{73E8E820-C8AA-47CC-BB2B-152CA4D0B856}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KnnResults.Domain", "KnnResults.Domain\KnnResults.Domain.csproj", "{6BC4A00D-443C-4448-8B9E-587DABF0FD21}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KnnResults.Domain", "KnnResults.Domain\KnnResults.Domain.csproj", "{6BC4A00D-443C-4448-8B9E-587DABF0FD21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbAccessTests", "DbAccessTests\DbAccessTests.csproj", "{0EFBE961-56AB-45BB-9CD4-5F78478CC35D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,6 +27,10 @@ Global
 		{6BC4A00D-443C-4448-8B9E-587DABF0FD21}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6BC4A00D-443C-4448-8B9E-587DABF0FD21}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6BC4A00D-443C-4448-8B9E-587DABF0FD21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EFBE961-56AB-45BB-9CD4-5F78478CC35D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EFBE961-56AB-45BB-9CD4-5F78478CC35D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EFBE961-56AB-45BB-9CD4-5F78478CC35D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EFBE961-56AB-45BB-9CD4-5F78478CC35D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
