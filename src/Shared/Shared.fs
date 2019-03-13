@@ -17,7 +17,7 @@ type AttributeCandidate = {Id : int; Representatives : ImagePatch list; Status :
 type InitialDisplay = {Candidates : AttributeCandidate list}
 type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string}
 type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list; IgnoredCategories : string list}
-type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list}
+type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list; Quality : string}
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
 
 

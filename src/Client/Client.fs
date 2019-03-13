@@ -40,6 +40,7 @@ type Model =
 type Msg =
 | FreshDataArrived of Result<AttributeCandidate,exn>
 | Reject of AttributeCandidate
+| RejectWithReason of AttributeCandidate
 | Expand  of AttributeCandidate
 | AcceptTill of AttributeCandidate * Neighbor
 | ExpansionArrived of Result<AttributeExpansion,exn>
@@ -82,6 +83,7 @@ let init () : Model * Cmd<Msg> =
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
+let mutable lastReason = "Not meaningful as an attribute"
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match currentModel.CurrentExpansion, msg with
     | _ ,FireAjax ->
@@ -96,6 +98,13 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c); CurrentExpansion = None  }, Cmd.ofMsg AjaxArrived
     | _, ExpansionArrived (Ok(expansion)) ->
         {currentModel with CurrentExpansion = Some expansion}, Cmd.ofMsg AjaxArrived
+    | _, RejectWithReason(cand) ->
+        let reason = promptDialog("Please provide reason for rejection",lastReason)
+        if reason <> null  then         
+            lastReason <- reason
+            currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = reason} FreshDataArrived
+        else
+            currentModel, Cmd.none
     | _, Reject(cand) ->
         //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
         currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"} FreshDataArrived
@@ -110,18 +119,23 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         {currentModel with CurrentExpansion = Some {exp with IgnoredCategories = ignoreSet}}, Cmd.none
     | Some(exp), AcceptTill(cand,pickedN)   ->
         let newName = promptDialog("Please provide a new name for discovered visual attribute","Flower pattern")
-        let filteredKnn =
-            exp.Neighbors
-            |> List.takeWhile (fun nn -> nn <> pickedN)
-            |> List.append [pickedN]
-            |> List.map (fun nn -> {nn with Accepted = true})
-            |> List.filter (fun n -> exp.IgnoredCategories |> List.exists (fun ic -> n.Categories |> List.contains ic) |> not)
-        {currentModel with CurrentExpansion = Some {exp with Neighbors = filteredKnn}}, ajax Server.api.acceptNewAttribute  {
-            Candidate = cand;
-            NewName = newName;
-            AcceptedMatches = filteredKnn;
-            IgnoredCategories = exp.IgnoredCategories
-        } FreshDataArrived
+        let quality = promptDialog("Please provide a subjective numerical ranking 0-10 of the attribute's quality","-1")
+        if newName <> null & quality <> null then
+            let filteredKnn =
+                exp.Neighbors
+                |> List.takeWhile (fun nn -> nn <> pickedN)
+                |> List.append [pickedN]
+                |> List.map (fun nn -> {nn with Accepted = true})
+                |> List.filter (fun n -> exp.IgnoredCategories |> List.exists (fun ic -> n.Categories |> List.contains ic) |> not)
+            {currentModel with CurrentExpansion = Some {exp with Neighbors = filteredKnn}}, ajax Server.api.acceptNewAttribute  {
+                Candidate = cand;
+                NewName = newName;
+                AcceptedMatches = filteredKnn;
+                IgnoredCategories = exp.IgnoredCategories;
+                Quality = quality
+            } FreshDataArrived
+        else
+            currentModel, Cmd.none
     | _ -> currentModel, Cmd.none
 
 
@@ -261,6 +275,7 @@ let renderCandidate (c:AttributeCandidate) (smallButton) =
             yield br [];                                                   
             if c.Status = Offered then
                 yield smallButton "Reject" (Reject(c)) IsDanger
+                yield smallButton "Reject w/ reason" (RejectWithReason(c)) IsWarning
         ];
     for (i,patches) in c.Representatives |> List.groupBy fst do                                                
         yield td [ ] [

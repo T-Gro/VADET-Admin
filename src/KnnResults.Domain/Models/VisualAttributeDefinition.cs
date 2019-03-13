@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace KnnResults.Domain.Models
@@ -11,6 +11,7 @@ namespace KnnResults.Domain.Models
         }
 
         public int Id { get; set; }
+        public int OriginalProposalId { get; set; }
         public string Name { get; set; }
         public string Quality { get; set; }
         public string Candidates { get; set; }

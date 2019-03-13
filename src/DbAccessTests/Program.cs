@@ -11,7 +11,7 @@ namespace DbAccessTests
             Console.WriteLine("Hello World!");
             using (var db = new VADETContext())
             {
-                var cnt = db.ZootBataProducts.Count(x => x.Brand == "Zoot");
+                var cnt = db.VisualAttributeDefinition.Count(x => x.OriginalProposalId > 5);
                 Console.WriteLine(cnt);
                 Console.ReadLine();
             }

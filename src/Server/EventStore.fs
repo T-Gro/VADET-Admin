@@ -28,10 +28,15 @@ module EventStore
         let json = Newtonsoft.Json.JsonConvert.SerializeObject(obj,Newtonsoft.Json.Formatting.Indented)
         File.WriteAllTextAsync(fileName,json) |> ignore
 
-    let Rejections = load<Rejections> "Attribute-Rejections.json" |> Option.defaultValue (new Rejections())
-       
-    //let Approvals = load<Approvals> "Attribute-Approvals.json" |> Option.defaultValue (new Approvals())
-       
+    let Rejections = load<Rejections> "Attribute-Rejections.json" |> Option.defaultValue (new Rejections())    
+
+    let loadExistingApprovals() =
+        use dbContext = new VADETContext()        
+        query {
+            for attr in dbContext.VisualAttributeDefinition do               
+                select (attr.OriginalProposalId,(attr.CreatedAt.Value,attr.Name))
+        }
+        |> dict
 
     let accept (acc:AcceptedAttribute) =
         use dbContext = new VADETContext()
@@ -40,8 +45,9 @@ module EventStore
         let accepted = imageDistances |> List.filter (fun (id,_,_) -> id.Contains("rejected.png") |> not)
 
         let visAttr = new VisualAttributeDefinition()
-        visAttr.Id <- acc.Candidate.Id
+        visAttr.OriginalProposalId <- acc.Candidate.Id
         visAttr.Candidates <- sprintf "%A" acc.Candidate.Representatives
+        visAttr.Quality <- acc.Quality
         visAttr.DiscardedCategories <- sprintf "%A" acc.IgnoredCategories
         visAttr.DiscardedProducts <- sprintf "%A" (rejected |> List.map (fun (id,_,_) -> id.Substring("rejected.png?orig=".Length)))
         visAttr.DistanceTreshold <- imageDistances |> List.map (fun (_,dist,_) -> float dist) |> List.tryLast |> Option.toNullable
@@ -50,8 +56,10 @@ module EventStore
         for (name,distance,coverage) in accepted do
             let cleanId = Path.GetFileNameWithoutExtension name
             visAttr.ProductVisualAttributes.Add(new ProductVisualAttributes(Distance = float distance, Coverage = float coverage, Attribute = visAttr, ProductId = cleanId))
-            
-        printf "Saved = %i results" (dbContext.SaveChanges())
+
+        dbContext.VisualAttributeDefinition.Add visAttr |> ignore
+        let saved = dbContext.SaveChanges()        
+        printfn "Saved = %i results" saved
 
         visAttr
         
