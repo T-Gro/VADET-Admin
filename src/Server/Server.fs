@@ -16,7 +16,7 @@ let reject (rejection:RejectionOfAttribute) = task {
 let accept (acc:AcceptedAttribute) = task {
     let ev = EventStore.accept acc
     return {                
-                acc.Candidate with Status = Accepted(ev.Time, acc.NewName)                
+                acc.Candidate with Status = Accepted(ev.CreatedAt.Value,ev.Name)                
             }}
 
 let expand cand = task {

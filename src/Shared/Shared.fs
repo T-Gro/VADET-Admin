@@ -4,6 +4,7 @@ open System
 
 type Image = ImageId of string
 type Patch = PatchId of string
+
 type ImagePatch = Image * Patch
 type Neighbor = {Hit:Image;Distance:float32;Accepted:bool; Patches: Patch list; Categories: string list}
 type TextAttribute = Text of string
@@ -16,9 +17,13 @@ type AttributeCandidate = {Id : int; Representatives : ImagePatch list; Status :
 type InitialDisplay = {Candidates : AttributeCandidate list}
 type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string}
 type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list; IgnoredCategories : string list}
-type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string}
+type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list}
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
 
+
+module Common =
+    let extractImgId (ImageId x) = x
+    let extractPatchId (PatchId x) = x
 
 module Route =
     /// Defines how routes are generated on server and mapped from client

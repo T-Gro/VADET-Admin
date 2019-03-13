@@ -10,6 +10,7 @@ open Fable.PowerPack.Fetch
 open Thoth.Json
 
 open Shared
+open Common
 
 
 open Fulma
@@ -50,8 +51,6 @@ type Msg =
 | ToggleIgnore of string
 
 module Server =
-
-    open Shared
     open Fable.Remoting.Client
 
     /// A proxy you can use to talk to server directly
@@ -59,8 +58,6 @@ module Server =
       Remoting.createApi()
       |> Remoting.withRouteBuilder Route.clientBuilder
       |> Remoting.buildProxy<ICounterApi>
-
- 
 
 
 let ajax call arguments resultMessage =
@@ -103,7 +100,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
         currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"} FreshDataArrived
     | _, SkipNeighbour(n) ->
-        let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png"); Categories = []}
+        let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png?orig=" + extractImgId n.Hit); Categories = []}
         let exp = currentModel.CurrentExpansion |> Option.map (fun exp -> {exp with Neighbors = exp.Neighbors |> List.map (fun nn -> if nn <> n then nn else emptyN)})
         {currentModel with CurrentExpansion =  exp }, Cmd.none
      | _, Expand(cand) ->       
@@ -118,10 +115,12 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             |> List.takeWhile (fun nn -> nn <> pickedN)
             |> List.append [pickedN]
             |> List.map (fun nn -> {nn with Accepted = true})
+            |> List.filter (fun n -> exp.IgnoredCategories |> List.exists (fun ic -> n.Categories |> List.contains ic) |> not)
         {currentModel with CurrentExpansion = Some {exp with Neighbors = filteredKnn}}, ajax Server.api.acceptNewAttribute  {
             Candidate = cand;
             NewName = newName;
-            AcceptedMatches = filteredKnn
+            AcceptedMatches = filteredKnn;
+            IgnoredCategories = exp.IgnoredCategories
         } FreshDataArrived
     | _ -> currentModel, Cmd.none
 
@@ -179,8 +178,7 @@ let statusOrder  = function
     | Accepted(_,_) -> 0
     | Rejected(_,_) -> 2
 
-let extractImgId (ImageId x) = x
-let extractPatchId (PatchId x) = x
+
 
 let renderImageWithPatches image patches =
     div [ClassName("img-container")] [
