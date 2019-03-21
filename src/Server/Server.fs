@@ -4,6 +4,7 @@ open Saturn
 open Shared
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
+open Microsoft.Extensions.Logging
 
 
 let load () = task{   return  { Candidates = PatchProposals.loadInitialDisplay()}  }
@@ -50,9 +51,9 @@ let app = application {
     use_iis
 #endif      
     use_router webApp
+    error_handler (fun ex _ -> pipeline { text (ex.ToString()) })
     memory_cache
-    use_static publicPath
-    
+    use_static publicPath    
 }
 
 run app

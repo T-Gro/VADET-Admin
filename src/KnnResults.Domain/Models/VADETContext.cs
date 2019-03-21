@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
@@ -24,8 +25,14 @@ namespace KnnResults.Domain.Models
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var conn = Environment.GetEnvironmentVariable("VADETSQL");
-                optionsBuilder.UseSqlServer(conn);
+                var conn = Environment.GetEnvironmentVariable("VADETSQL") ;
+                Console.WriteLine("Conn. string is " + conn);
+                if (String.IsNullOrEmpty(conn))
+                {
+                    conn =  ConfigurationManager.ConnectionStrings[0].ConnectionString;
+                    Console.WriteLine("Conn. string is " + conn);
+                }
+                optionsBuilder.UseSqlServer(conn );
             }
         }
 
