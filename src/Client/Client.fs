@@ -26,6 +26,9 @@ open Fable.Import.React
 [<Fable.Core.Emit("window.prompt($0,$1) ")>]
 let promptDialog (headerText : string, defaultValue: string) : string = Exceptions.jsNative
 
+[<Emit("undefined")>]
+let undefined : obj = jsNative
+
 
 // The model holds data that you want to keep track of while the application is running
 // in this case, we are keeping track of a counter
@@ -93,6 +96,16 @@ let init () : Model * Cmd<Msg> =
     let cmd =  ajax  Server.api.load () InitialisationArrived
     initialModel, cmd
 
+let handleError (e:exn) origMsg currentModel =
+    match e with
+        | :? Fable.Remoting.Client.ProxyRequestException as ex ->
+            let text = Fable.Import.JS.JSON.stringify(Fable.Import.JS.JSON.parse(ex.ResponseText),(fun k v -> if k = "ignored" || k = "handled" then undefined  else v),2)
+            Fable.Import.Browser.window.alert(sprintf "The operation has produced an error and has been rolled back \n\n. %s" text)
+            currentModel, Cmd.ofMsg AjaxArrived
+        | _ ->
+            Fable.Import.Browser.window.alert(sprintf "There was an issue with current operation %A" origMsg)
+            currentModel, Cmd.ofMsg AjaxArrived
+
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
@@ -150,6 +163,9 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             } FreshDataArrived
         else
             currentModel, Cmd.none
+    | _, InitialisationArrived(Error(e)) -> handleError e msg currentModel        
+    | _, ExpansionArrived(Error(e)) -> handleError e msg currentModel
+    | _, FreshDataArrived(Error(e)) -> handleError e msg currentModel
     | _ -> currentModel, Cmd.none
 
 

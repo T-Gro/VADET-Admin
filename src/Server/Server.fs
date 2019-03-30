@@ -5,6 +5,9 @@ open Shared
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Microsoft.Extensions.Logging
+open Microsoft.EntityFrameworkCore
+open System.Data.SqlClient
+open System
 
 
 let load () = task{   return  { Candidates = PatchProposals.loadInitialDisplay()}  }
@@ -34,10 +37,27 @@ let counterApi = {
     expandCandidate = expand >> Async.AwaitTask
 }
 
+type CustomError = { errorMsg: string }
+
+let rec errorHandler (ex: System.Exception) (routeInfo: RouteInfo<Microsoft.AspNetCore.Http.HttpContext>) =  
+    printfn "Error at %s on method %s = %s" routeInfo.path routeInfo.methodName (ex.ToString())   
+    match ex with
+    | :? AggregateException as ae ->
+        errorHandler(ae.InnerException) routeInfo
+    | :? DbUpdateException as x ->
+        match ex.InnerException with
+        | :? SqlException as sex ->
+            let customError = { errorMsg = sprintf "The desired operation attempted to violate uniqueness of the database and has been rollbacked. Furthers details are: %A" (sex.Errors.[0].Message)}
+            Propagate customError
+        | _ -> Propagate {errorMsg = x.Message}
+    | _ ->       
+        Propagate {errorMsg = ex.ToString()}
+
 let webApp =
     Remoting.createApi()
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.fromValue counterApi
+    |> Remoting.withErrorHandler errorHandler
     |> Remoting.buildHttpHandler
 
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
