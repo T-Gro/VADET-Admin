@@ -7,6 +7,7 @@ module EventStore
     open KnnResults.Domain.Models
     open Shared.Common
 
+    [<CLIMutable>]
     type TimedEvent<'a> = {Data : 'a; Time : DateTime}
 
     let loadExistingRejections () =
@@ -15,11 +16,10 @@ module EventStore
         query {
             for attr in dbContext.AttributeRejections do
                 where (attr.AttributeSource = source)
-                select (attr.OriginalProposalId,{Time = attr.Time; Data = attr.Reason})
+                select (attr.OriginalProposalId,(attr.Reason,attr.Time))
         }
         |> dict
 
-    let Rejections = loadExistingRejections()
 
     let loadExistingApprovals() =
         use dbContext = new VADETContext()
@@ -70,10 +70,8 @@ module EventStore
 
         dbContext.AttributeRejections.Add r |> ignore
         let saved = dbContext.SaveChanges()        
-        printfn "Saved = %i results" saved
+        printfn "Rejected = %i " saved
 
-        let ev = {Time = r.Time; Data = rej.Reason}
-        Rejections.Add(rej.Subject.Id, ev)
-
-        ev
+        {Time = r.Time; Data = rej.Reason}    
+        
         

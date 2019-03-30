@@ -45,6 +45,8 @@ namespace KnnResults.Domain.Models
             {
                 entity.Property(e => e.Id).HasColumnName("ID");
 
+                entity.HasIndex(e => new {e.ProductId, e.AttributeId}).IsUnique().ForSqlServerIsClustered();
+
                 entity.Property(e => e.ProductId)
                     .IsRequired()
                     .HasMaxLength(50);
@@ -77,6 +79,14 @@ namespace KnnResults.Domain.Models
                     .HasMaxLength(255);
 
                 entity.Property(e => e.Quality).HasMaxLength(50);
+
+                VisualAttributeDefinition x;
+
+                entity.HasIndex(e => new {e.AttributeSource, e.OriginalProposalId})
+                    .ForSqlServerInclude(nameof(x.CreatedAt), nameof(x.Name))
+                    .IsUnique();
+
+                entity.HasIndex(e => e.Name).IsUnique();
             });
 
             modelBuilder.Entity<AttributeRejection>(entity =>
@@ -88,6 +98,12 @@ namespace KnnResults.Domain.Models
                 entity.Property(e => e.Time)
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("(getdate())");
+
+                AttributeRejection x;
+
+                entity.HasIndex(e => new { e.AttributeSource, e.OriginalProposalId })
+                    .ForSqlServerInclude(nameof(x.Reason), nameof(x.Time))
+                    .IsUnique();
             });
 
             modelBuilder.Entity<ZootBataProducts>(entity =>

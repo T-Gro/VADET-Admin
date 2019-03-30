@@ -52,8 +52,11 @@ let app = application {
 #endif      
     use_router webApp
     error_handler (fun ex _ -> pipeline { text (ex.ToString()) })
+    logging (fun (builder: ILoggingBuilder) -> builder.SetMinimumLevel(LogLevel.Information) |> ignore)
     memory_cache
-    use_static publicPath    
+    use_static publicPath
+    
 }
 
+printfn "Process ID is = %i" (System.Diagnostics.Process.GetCurrentProcess().Id)
 run app

@@ -11,16 +11,17 @@ module PatchProposals
 
     let loadInitialDisplay() =
         let acceptedSoFar = EventStore.loadExistingApprovals()
+        let rejectedSoFar = EventStore.loadExistingRejections()
         let createCandidate (r : ResultsRow) =
             let imgs =
                 [yield r.Query; yield! (r.Hits |> Seq.map (fun x -> x.Hit))]
                 |> List.map (fun p -> (ImageId(NameMap.[p.ImageId]),PatchId(PatchMap.[p.PatchId])))
             let id = IdMap.[r.Query]
             let status =
-                let (isRej,rej) = EventStore.Rejections.TryGetValue id
+                let (isRej,rej) = rejectedSoFar.TryGetValue id
                 let (isAcc,acc) = acceptedSoFar.TryGetValue id
                 match (isRej,isAcc) with
-                    | (true,false) -> Rejected(rej.Time, rej.Data) 
+                    | (true,false) -> Rejected(rej |> snd, rej |> fst) 
                     | (_,true) -> Accepted(fst acc, snd acc)
                     | _ -> Offered       
 

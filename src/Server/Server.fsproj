@@ -5,6 +5,9 @@
         <TargetFramework>netcoreapp2.2</TargetFramework>
         <UserSecretsId>0a35228c-e36d-43f1-ac30-bab44946cd91</UserSecretsId>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+      <DefineConstants>DEBUG;TRACE</DefineConstants>
+    </PropertyGroup>
     <ItemGroup>
         <Compile Include="..\Shared\Shared.fs" />
         <Compile Include="EventStore.fs" />

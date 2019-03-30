@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Migrations\20190330173126_AttributeRejections.cs" />
+    <Compile Remove="Migrations\20190330200422_UniqueConstraintsAdded.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="12.1.2" />

@@ -133,7 +133,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | Some(exp), AcceptTill(cand,pickedN)   ->
         let newName = promptDialog("Please provide a new name for discovered visual attribute","Flower pattern")
         let quality = promptDialog("Please provide a subjective numerical ranking 0-10 of the attribute's quality","-1")
-        if newName <> null & quality <> null then
+        if newName <> null && quality <> null then
             let filteredKnn =
                 exp.Neighbors
                 |> List.takeWhile (fun nn -> nn <> pickedN)
