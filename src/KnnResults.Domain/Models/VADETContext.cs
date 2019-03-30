@@ -20,6 +20,7 @@ namespace KnnResults.Domain.Models
         public virtual DbSet<ProductVisualAttributes> ProductVisualAttributes { get; set; }
         public virtual DbSet<VisualAttributeDefinition> VisualAttributeDefinition { get; set; }
         public virtual DbSet<ZootBataProducts> ZootBataProducts { get; set; }
+        public virtual DbSet<AttributeRejection> AttributeRejections { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -51,7 +52,7 @@ namespace KnnResults.Domain.Models
                 entity.HasOne(d => d.Attribute)
                     .WithMany(p => p.ProductVisualAttributes)
                     .HasForeignKey(d => d.AttributeId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .OnDelete(DeleteBehavior.Cascade)
                     .HasConstraintName("FK_ProductVisualAttributes_VisualAttributeDefinition");
 
                 entity.HasOne(d => d.Product)
@@ -76,6 +77,17 @@ namespace KnnResults.Domain.Models
                     .HasMaxLength(255);
 
                 entity.Property(e => e.Quality).HasMaxLength(50);
+            });
+
+            modelBuilder.Entity<AttributeRejection>(entity =>
+            {
+                entity.Property(e => e.Id).HasColumnName("ID");
+                entity.Property(e => e.OriginalProposalId).IsRequired();
+                entity.Property(e => e.Content).IsRequired();
+                entity.Property(e => e.AttributeSource).IsRequired();
+                entity.Property(e => e.Time)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("(getdate())");
             });
 
             modelBuilder.Entity<ZootBataProducts>(entity =>

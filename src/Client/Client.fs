@@ -22,8 +22,10 @@ open Fable.Core
 open Fable.Import.React
 
 
+
 [<Fable.Core.Emit("window.prompt($0,$1) ")>]
 let promptDialog (headerText : string, defaultValue: string) : string = Exceptions.jsNative
+
 
 // The model holds data that you want to keep track of while the application is running
 // in this case, we are keeping track of a counter
@@ -53,11 +55,15 @@ type Msg =
 
 module Server =
     open Fable.Remoting.Client
-
+    open Fable.Import
+    
     /// A proxy you can use to talk to server directly
+    let currentPath = Browser.window.location.pathname.Substring(0,Browser.window.location.pathname.Length-1)
+    let builder a b = currentPath + Route.builder a b
+
     let api : ICounterApi =
       Remoting.createApi()
-      |> Remoting.withRouteBuilder Route.clientBuilder
+      |> Remoting.withRouteBuilder builder
       |> Remoting.buildProxy<ICounterApi>
 
 
@@ -70,8 +76,15 @@ let ajax call arguments resultMessage =
         (Error >> resultMessage)
     Cmd.batch [Cmd.ofMsg FireAjax; serverCall]
 
+let mutable userName = ""
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
+    userName <- Fable.Import.Browser.localStorage.getItem "Username" :?> string
+    if userName = null then
+        userName <- promptDialog("This is your first time around in this browser. Please provide your username for tracking your accepted and rejected attributes.","(anonymous)")
+        Fable.Import.Browser.localStorage.setItem("Username",userName)
+
+
     let initialModel = {       
         Candidates = [];
         CurrentExpansion = None;
@@ -102,12 +115,12 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let reason = promptDialog("Please provide reason for rejection",lastReason)
         if reason <> null  then         
             lastReason <- reason
-            currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = reason} FreshDataArrived
+            currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = reason; Username = userName} FreshDataArrived
         else
             currentModel, Cmd.none
     | _, Reject(cand) ->
         //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
-        currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"} FreshDataArrived
+        currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"; Username = userName} FreshDataArrived
     | _, SkipNeighbour(n) ->
         let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png?orig=" + extractImgId n.Hit); Categories = []}
         let exp = currentModel.CurrentExpansion |> Option.map (fun exp -> {exp with Neighbors = exp.Neighbors |> List.map (fun nn -> if nn <> n then nn else emptyN)})
@@ -132,7 +145,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                 NewName = newName;
                 AcceptedMatches = filteredKnn;
                 IgnoredCategories = exp.IgnoredCategories;
-                Quality = quality
+                Quality = quality;
+                Username = userName
             } FreshDataArrived
         else
             currentModel, Cmd.none

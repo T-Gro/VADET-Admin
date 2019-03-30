@@ -8,32 +8,25 @@ module EventStore
     open Shared.Common
 
     type TimedEvent<'a> = {Data : 'a; Time : DateTime}
-    type CompactRejection = {Reason : string}
-    type CompactApproval = {AttrName : string; AcceptedNeighbours : int}
-    type Rejections = Dictionary<int,TimedEvent<CompactRejection>>
-    type Approvals = Dictionary<int,TimedEvent<CompactApproval>>
-    let timed x = {Data = x; Time = DateTime.UtcNow}
 
-    let load<'a> name =
-        let fileName = Path.Combine(ConfigurationManager.AppSettings.["Storage"],name)
-        if File.Exists fileName then
-            let data = File.ReadAllText(fileName)
-            let obj = Newtonsoft.Json.JsonConvert.DeserializeObject<'a>(data)            
-            Some obj
-        else
-            None
+    let loadExistingRejections () =
+        use dbContext = new VADETContext()
+        let source = ConfigurationManager.AppSettings.["FilteredPatchesBin"]
+        query {
+            for attr in dbContext.AttributeRejections do
+                where (attr.AttributeSource = source)
+                select (attr.OriginalProposalId,{Time = attr.Time; Data = attr.Reason})
+        }
+        |> dict
 
-    let save obj name =
-        let fileName = Path.Combine(ConfigurationManager.AppSettings.["Storage"],name)
-        let json = Newtonsoft.Json.JsonConvert.SerializeObject(obj,Newtonsoft.Json.Formatting.Indented)
-        File.WriteAllTextAsync(fileName,json) |> ignore
-
-    let Rejections = load<Rejections> "Attribute-Rejections.json" |> Option.defaultValue (new Rejections())    
+    let Rejections = loadExistingRejections()
 
     let loadExistingApprovals() =
-        use dbContext = new VADETContext()        
+        use dbContext = new VADETContext()
+        let source = ConfigurationManager.AppSettings.["FilteredPatchesBin"]
         query {
-            for attr in dbContext.VisualAttributeDefinition do               
+            for attr in dbContext.VisualAttributeDefinition do
+                where (attr.AttributeSource = source)
                 select (attr.OriginalProposalId,(attr.CreatedAt.Value,attr.Name))
         }
         |> dict
@@ -43,15 +36,17 @@ module EventStore
         let imageDistances = acc.AcceptedMatches |> List.map (fun n -> (extractImgId n.Hit, n.Distance, n.Patches.Length))
         let rejected = imageDistances |> List.filter (fun (id,_,_) -> id.Contains("rejected.png"))
         let accepted = imageDistances |> List.filter (fun (id,_,_) -> id.Contains("rejected.png") |> not)
-
+        
         let visAttr = new VisualAttributeDefinition()
         visAttr.OriginalProposalId <- acc.Candidate.Id
+        visAttr.AttributeSource <- ConfigurationManager.AppSettings.["FilteredPatchesBin"]
         visAttr.Candidates <- sprintf "%A" acc.Candidate.Representatives
         visAttr.Quality <- acc.Quality
         visAttr.DiscardedCategories <- sprintf "%A" acc.IgnoredCategories
         visAttr.DiscardedProducts <- sprintf "%A" (rejected |> List.map (fun (id,_,_) -> id.Substring("rejected.png?orig=".Length)))
         visAttr.DistanceTreshold <- imageDistances |> List.map (fun (_,dist,_) -> float dist) |> List.tryLast |> Option.toNullable
         visAttr.Name <- acc.NewName
+        visAttr.User <- acc.Username
 
         for (name,distance,coverage) in accepted do
             let cleanId = Path.GetFileNameWithoutExtension name
@@ -65,7 +60,20 @@ module EventStore
         
 
     let reject (rej:RejectionOfAttribute) =
-        let ev = timed {Reason = rej.Reason}
+        use dbContext = new VADETContext()
+        let r = new AttributeRejection()
+        r.Reason <- rej.Reason
+        r.AttributeSource <- ConfigurationManager.AppSettings.["FilteredPatchesBin"]
+        r.OriginalProposalId <- rej.Subject.Id
+        r.Content <- sprintf "%A" rej.Subject.Representatives
+        r.User <- rej.Username
+
+        dbContext.AttributeRejections.Add r |> ignore
+        let saved = dbContext.SaveChanges()        
+        printfn "Saved = %i results" saved
+
+        let ev = {Time = r.Time; Data = rej.Reason}
         Rejections.Add(rej.Subject.Id, ev)
-        save Rejections "Attribute-Rejections.json"
+
         ev
+        

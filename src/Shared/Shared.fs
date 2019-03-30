@@ -15,9 +15,9 @@ type AttributeStatus =
     |Accepted of DateTime * string
 type AttributeCandidate = {Id : int; Representatives : ImagePatch list; Status : AttributeStatus}
 type InitialDisplay = {Candidates : AttributeCandidate list}
-type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string}
+type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string; Username : string}
 type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list; IgnoredCategories : string list}
-type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list; Quality : string}
+type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list; Quality : string; Username : string}
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
 
 

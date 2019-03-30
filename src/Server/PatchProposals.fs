@@ -20,7 +20,7 @@ module PatchProposals
                 let (isRej,rej) = EventStore.Rejections.TryGetValue id
                 let (isAcc,acc) = acceptedSoFar.TryGetValue id
                 match (isRej,isAcc) with
-                    | (true,false) -> Rejected(rej.Time, rej.Data.Reason) 
+                    | (true,false) -> Rejected(rej.Time, rej.Data) 
                     | (_,true) -> Accepted(fst acc, snd acc)
                     | _ -> Offered       
 

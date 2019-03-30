@@ -12,6 +12,8 @@ namespace KnnResults.Domain.Models
 
         public int Id { get; set; }
         public int OriginalProposalId { get; set; }
+        public string AttributeSource { get; set; }
+        public string User { get; set; }
         public string Name { get; set; }
         public string Quality { get; set; }
         public string Candidates { get; set; }
