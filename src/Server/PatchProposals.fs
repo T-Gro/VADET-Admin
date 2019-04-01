@@ -2,6 +2,7 @@ module PatchProposals
     open KnnResults.Domain
     open System.Configuration
     open Shared
+    open System
 
     let Loaded = AllResults.Load(ConfigurationManager.AppSettings.["FilteredPatchesBin"])    
     let NameMap = Loaded.ImageEncoding |> Seq.map (fun kvp -> (kvp.Value,kvp.Key)) |> Map.ofSeq
@@ -26,12 +27,15 @@ module PatchProposals
                     | _ -> Offered       
 
             {Representatives = imgs; Status = status; Id = id}
+
+        let r = new Random()
         let firstItems =
             Loaded.Rows
             |> Seq.rev
             |> Seq.map createCandidate
             |> Seq.filter (fun c -> c.Status = Offered)
-            |> Seq.truncate 50
+            |> Seq.sortBy (fun c -> r.Next())
+            |> Seq.truncate 75
         firstItems  |> List.ofSeq
 
     let findHits (ImageId(i),PatchId(p)) = OverallDataAccessor.FindHitsInBigFile(i,p) |> Seq.toArray
