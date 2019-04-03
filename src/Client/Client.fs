@@ -38,7 +38,8 @@ type Model =
     {          
         Candidates : AttributeCandidate list;
         CurrentExpansion : AttributeExpansion option;
-        PendingAjax : bool}
+        PendingAjax : bool;
+        ShowPatchesInModal : bool}
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
@@ -55,6 +56,7 @@ type Msg =
 | InitialisationArrived of Result<InitialDisplay,exn>
 | SkipNeighbour of Neighbor
 | ToggleIgnore of string
+| ToggleShowPatches
 
 module Server =
     open Fable.Remoting.Client
@@ -91,7 +93,8 @@ let init () : Model * Cmd<Msg> =
     let initialModel = {       
         Candidates = [];
         CurrentExpansion = None;
-        PendingAjax = false }
+        PendingAjax = false;
+        ShowPatchesInModal = true}
 
     let cmd =  ajax  Server.api.load () InitialisationArrived
     initialModel, cmd
@@ -166,6 +169,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, InitialisationArrived(Error(e)) -> handleError e msg currentModel        
     | _, ExpansionArrived(Error(e)) -> handleError e msg currentModel
     | _, FreshDataArrived(Error(e)) -> handleError e msg currentModel
+    | _, ToggleShowPatches -> {currentModel with ShowPatchesInModal = not currentModel.ShowPatchesInModal}, Cmd.none
     | _ -> currentModel, Cmd.none
 
 
@@ -224,7 +228,7 @@ let statusOrder  = function
 
 
 
-let renderImageWithPatches image patches =
+let renderImageWithPatches image patches   =
     div [ClassName("img-container")] [
         yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-cropped/"+ extractImgId image) ]
         for p in patches |> Seq.distinct do
@@ -266,7 +270,7 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                         if n.Accepted then yield ClassName "blink"
                     ]
                     [
-                        Image.image [ Image.Is128x128 ] [renderImageWithPatches n.Hit n.Patches]                    
+                        Image.image [ Image.Is128x128 ] [renderImageWithPatches n.Hit (n.Patches |> Seq.filter(fun _ -> model.ShowPatchesInModal))]                    
                     ]
 
         Modal.modal
@@ -279,6 +283,10 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                             []
                             [
                                 yield! allCategories;
+                                yield (br []);
+                                yield Button.button
+                                        [Button.Color (if model.ShowPatchesInModal then IsWarning else IsSuccess); Button.OnClick (fun _ -> dispatch (ToggleShowPatches) ); Button.Size IsMedium ]
+                                        [str (if model.ShowPatchesInModal then "Hide borders of patches" else "Show borders of patches")]
                                 yield (br []);
                                 yield! (
                                     expansion.Neighbors
