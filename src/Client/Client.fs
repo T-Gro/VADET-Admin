@@ -20,6 +20,7 @@ open Fable.FontAwesome.Free
 open Fulma
 open Fable.Core
 open Fable.Import.React
+open System
 
 
 
@@ -39,7 +40,9 @@ type Model =
         Candidates : AttributeCandidate list;
         CurrentExpansion : AttributeExpansion option;
         PendingAjax : bool;
-        ShowPatchesInModal : bool}
+        ShowPatchesInModal : bool;
+        SortAlphabetically : bool;
+        CategoriesSwitchedToWhitelist : bool}
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
@@ -57,6 +60,8 @@ type Msg =
 | SkipNeighbour of Neighbor
 | ToggleIgnore of string
 | ToggleShowPatches
+| ToggleCategorySortMode
+| ToggleCategorySelectionMeaning
 
 module Server =
     open Fable.Remoting.Client
@@ -94,7 +99,9 @@ let init () : Model * Cmd<Msg> =
         Candidates = [];
         CurrentExpansion = None;
         PendingAjax = false;
-        ShowPatchesInModal = true}
+        ShowPatchesInModal = true;
+        SortAlphabetically = false;
+        CategoriesSwitchedToWhitelist = false}
 
     let cmd =  ajax  Server.api.load () InitialisationArrived
     initialModel, cmd
@@ -113,6 +120,15 @@ let handleError (e:exn) origMsg currentModel =
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
 let mutable lastReason = "Not meaningful as an attribute"
+
+let filteredNeighbours (exp: AttributeExpansion) (md : Model) =
+    let blackwhitelist = if md.CategoriesSwitchedToWhitelist then id else not
+    let neighbours =
+        exp.Neighbors
+        |> List.filter (fun n -> exp.IgnoredCategories |> List.exists (fun ic -> n.Categories |> List.contains ic) |> blackwhitelist)
+    neighbours
+
+
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match currentModel.CurrentExpansion, msg with
     | _ ,FireAjax ->
@@ -151,11 +167,11 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let quality = promptDialog("Please provide a subjective numerical ranking 0-10 of the attribute's quality","-1")
         if newName <> null && quality <> null then
             let filteredKnn =
-                exp.Neighbors
+                filteredNeighbours exp currentModel
                 |> List.takeWhile (fun nn -> nn <> pickedN)
                 |> List.append [pickedN]
                 |> List.map (fun nn -> {nn with Accepted = true})
-                |> List.filter (fun n -> exp.IgnoredCategories |> List.exists (fun ic -> n.Categories |> List.contains ic) |> not)
+                
             {currentModel with CurrentExpansion = Some {exp with Neighbors = filteredKnn}}, ajax Server.api.acceptNewAttribute  {
                 Candidate = cand;
                 NewName = newName;
@@ -170,6 +186,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, ExpansionArrived(Error(e)) -> handleError e msg currentModel
     | _, FreshDataArrived(Error(e)) -> handleError e msg currentModel
     | _, ToggleShowPatches -> {currentModel with ShowPatchesInModal = not currentModel.ShowPatchesInModal}, Cmd.none
+    | _, ToggleCategorySortMode -> {currentModel with SortAlphabetically = not currentModel.SortAlphabetically}, Cmd.none
+    | _, ToggleCategorySelectionMeaning -> {currentModel with CategoriesSwitchedToWhitelist = not currentModel.CategoriesSwitchedToWhitelist}, Cmd.none
     | _ -> currentModel, Cmd.none
 
 
@@ -251,12 +269,17 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
     match model.CurrentExpansion with
     | None -> br[]
     | Some(expansion) ->
+        let sortList list =
+            if model.SortAlphabetically then
+                list |> List.sortBy (fun o -> (string (fst o)).ToUpper().Trim() )
+            else list|> List.sortByDescending snd;
+
         let allCategories =
             expansion.Neighbors
             |> List.collect (fun x -> x.Categories)
             |> List.groupBy id
             |> List.map (fun (key, g) -> (key, g |> List.length ) )
-            |> List.sortByDescending snd
+            |> sortList
             |> List.map (fun (cat,count) ->
                 Button.button
                     [Button.Color (if expansion.IgnoredCategories |> List.contains cat then IsWarning else IsSuccess); Button.OnClick (fun _ -> dispatch (ToggleIgnore(cat)) ); Button.Size IsSmall ]
@@ -285,12 +308,18 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                                 yield! allCategories;
                                 yield (br []);
                                 yield Button.button
-                                        [Button.Color (if model.ShowPatchesInModal then IsDanger  else IsWarning); Button.OnClick (fun _ -> dispatch (ToggleShowPatches) ); Button.Size IsSmall ]
-                                        [str (if model.ShowPatchesInModal then "Hide borders of patches" else "Show borders of patches")]
+                                        [Button.Color (if model.ShowPatchesInModal then IsInfo  else IsWarning); Button.OnClick (fun _ -> dispatch (ToggleShowPatches) ); Button.Size IsSmall ]
+                                        [str (if model.ShowPatchesInModal then "Click to hide borders of patches" else "Clcik to show borders of patches")]
+                                yield Button.button
+                                        [Button.Color (if model.SortAlphabetically then IsWarning  else IsInfo); Button.OnClick (fun _ -> dispatch (ToggleCategorySortMode) ); Button.Size IsSmall ]
+                                        [str (if model.SortAlphabetically then "Categories sorted alphabetically (click to change to count)" else "Categories are sorted by count (click to sort alphabetically")]
+                                yield Button.button
+                                        [Button.Color (if model.CategoriesSwitchedToWhitelist then IsWarning  else IsInfo); Button.OnClick (fun _ -> dispatch (ToggleCategorySelectionMeaning) ); Button.Size IsSmall ]
+                                        [str (if model.CategoriesSwitchedToWhitelist then "Clicking categories whitelists them (click to change to blacklist)" else "Selected categories are blacklisted (click to change to whitelist)")]
+                                
                                 yield (br []);
                                 yield! (
-                                    expansion.Neighbors
-                                    |> List.filter (fun n -> expansion.IgnoredCategories |> List.exists (fun ic -> n.Categories |> List.contains ic) |> not)
+                                    filteredNeighbours expansion model                                   
                                     |> List.map renderNeighbour);
                             ]
                         
