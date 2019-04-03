@@ -266,7 +266,7 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                     [
                         yield OnClick (fun _ -> dispatch (AcceptTill(expansion.Candidate,n)))
                         yield OnContextMenu (fun me -> dispatch (SkipNeighbour(n)); me.preventDefault())                      
-                        yield Title (sprintf "Distance = %f. Left-click to accept as an attribute assigned to all objects until this neighbour. Right-click to skip a selected neighbour." n.Distance)
+                        yield Title (sprintf "Distance = %f. Left-click to accept as an attribute assigned to all objects until this neighbour. Right-click to skip a selected neighbour.\n Categories = %A" n.Distance n.Categories)
                         if n.Accepted then yield ClassName "blink"
                     ]
                     [
@@ -285,7 +285,7 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                                 yield! allCategories;
                                 yield (br []);
                                 yield Button.button
-                                        [Button.Color (if model.ShowPatchesInModal then IsWarning else IsSuccess); Button.OnClick (fun _ -> dispatch (ToggleShowPatches) ); Button.Size IsMedium ]
+                                        [Button.Color (if model.ShowPatchesInModal then IsDanger  else IsWarning); Button.OnClick (fun _ -> dispatch (ToggleShowPatches) ); Button.Size IsSmall ]
                                         [str (if model.ShowPatchesInModal then "Hide borders of patches" else "Show borders of patches")]
                                 yield (br []);
                                 yield! (
