@@ -154,7 +154,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
         currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"; Username = userName} FreshDataArrived
     | _, SkipNeighbour(n) ->
-        let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png?orig=" + extractImgId n.Hit); Categories = []}
+        let emptyN = {Patches = []; Accepted = false; Distance = 100.0f; Hit = ImageId("rejected.png?orig=" + extractImgId n.Hit); Categories = n.Categories}
         let exp = currentModel.CurrentExpansion |> Option.map (fun exp -> {exp with Neighbors = exp.Neighbors |> List.map (fun nn -> if nn <> n then nn else emptyN)})
         {currentModel with CurrentExpansion =  exp }, Cmd.none
      | _, Expand(cand) ->       
