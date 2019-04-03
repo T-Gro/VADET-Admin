@@ -21,6 +21,7 @@ namespace KnnResults.Domain.Models
         public double? DistanceTreshold { get; set; }
         public string DiscardedProducts { get; set; }
         public string DiscardedCategories { get; set; }
+        public string WhitelistedCategories { get; set; }
 
         public virtual ICollection<ProductVisualAttributes> ProductVisualAttributes { get; set; }
     }

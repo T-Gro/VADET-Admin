@@ -44,9 +44,12 @@ module EventStore
         visAttr.Quality <- acc.Quality
         visAttr.DiscardedCategories <- sprintf "%A" acc.IgnoredCategories
         visAttr.DiscardedProducts <- sprintf "%A" (rejected |> List.map (fun (id,_,_) -> id.Substring("rejected.png?orig=".Length)))
-        visAttr.DistanceTreshold <- imageDistances |> List.map (fun (_,dist,_) -> float dist) |> List.tryLast |> Option.toNullable
+        visAttr.DistanceTreshold <- accepted |> List.map (fun (_,dist,_) -> float dist) |> List.tryLast |> Option.toNullable
         visAttr.Name <- acc.NewName
         visAttr.User <- acc.Username
+        if acc.AcceptedMatches.Head.Categories |> List.exists (fun c -> acc.IgnoredCategories |> List.contains c) then
+            visAttr.WhitelistedCategories <- visAttr.DiscardedCategories
+            visAttr.DiscardedCategories <- null
 
         for (name,distance,coverage) in accepted do
             let cleanId = Path.GetFileNameWithoutExtension name

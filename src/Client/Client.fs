@@ -167,7 +167,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let quality = promptDialog("Please provide a subjective numerical ranking 0-10 of the attribute's quality","-1")
         if newName <> null && quality <> null then
             let filteredKnn =
-                filteredNeighbours exp currentModel
+                filteredNeighbours exp currentModel            
                 |> List.takeWhile (fun nn -> nn <> pickedN)
                 |> List.append [pickedN]
                 |> List.map (fun nn -> {nn with Accepted = true})
