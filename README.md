@@ -51,6 +51,15 @@ It contains the data types and operations which are called from client to server
 Fsharp remoting handles the serialisation of the types to JSON strings on the wire over HTTPS.
 
 [API model](https://github.com/T-Gro/VADET-Admin/blob/master/src/Shared/Shared.fs)
+```
+type ICounterApi =
+    {       
+        load : unit -> Async<InitialDisplay>;
+        expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
+        acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
+        rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
+    }
+```
 
 ## Troubleshooting
 
