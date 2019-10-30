@@ -1,4 +1,4 @@
-#VADET-Admin
+## VADET-Admin
 
 This project is the user interace for administrators of Virtual Attributes, a research prototype to mine relational attributes out of visual data and its respective deep learning descriptors.
 
