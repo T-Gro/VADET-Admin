@@ -44,6 +44,13 @@ You will find more documentation about the used F# components at the following p
 * [Fable.Remoting](https://zaid-ajaj.github.io/Fable.Remoting/)
 * [Fulma](https://fulma.github.io/Fulma/)
 
+## Client-server API
+
+The API between client (browser) and server (.NET running F# application) is documented in the project Shared.fs.
+It contains the data types and operations which are called from client to server and carry also the respective return types.
+Fsharp remoting handles the serialisation of the types to JSON strings on the wire over HTTPS.
+
+[API model](https://github.com/T-Gro/VADET-Admin/blob/master/src/Shared/Shared.fs)
 
 ## Troubleshooting
 
