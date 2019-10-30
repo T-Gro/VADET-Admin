@@ -16,6 +16,15 @@ You'll need to install the following pre-requisites in order to build SAFE appli
 * [Node LTS](https://nodejs.org/en/download/) installed for the front end components.
 * If you're running on OSX or Linux, you'll also need to install [Mono](https://www.mono-project.com/docs/getting-started/install/).
 
+## Database connection
+The server side attempts to connect to a MS SQL SERVER database. The provider configurable, the code does not use any SQL SERVER specific features.
+
+The connection string is read usign an environment variable that must be prefilled at the production deployment server.
+The data model is created using the entity definitions in the folder [Models](https://github.com/T-Gro/VADET-Admin/tree/master/src/KnnResults.Domain/Models)
+```
+var conn = Environment.GetEnvironmentVariable("VADETSQL") ;
+```
+
 ## Work with the application
 
 To concurrently run the server and the client components in watch mode use the following command:
