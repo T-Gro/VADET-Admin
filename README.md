@@ -1,9 +1,13 @@
-# SAFE Template
+## VADET-Admin
 
-This template can be used to generate a full-stack web application using the [SAFE Stack](https://safe-stack.github.io/). It was created using the dotnet [SAFE Template](https://safe-stack.github.io/docs/template-overview/). If you want to learn more about the template why not start with the [quick start](https://safe-stack.github.io/docs/quickstart/) guide?
+This project is the user interace for administrators of Virtual Attributes, a research prototype to mine relational attributes out of visual data and its respective deep learning descriptors.
 
-## Install pre-requisites
+It is a client-server we application which requires pre-processed fiels as input (see GH prroject [preprocessing scripts](https://github.com/T-Gro/Visual-Attribute-Filtering-Scripts), and uses a relational database as its output. The database itself is not part of this project, but this project contains scripts which will create the schema from scratch via standard EntityFramework migrations.
 
+
+## Install pre-requisites for developers
+
+This page is written in F# and uses the SAFE template as its primary development stack.
 You'll need to install the following pre-requisites in order to build SAFE applications
 
 * The [.NET Core SDK](https://www.microsoft.com/net/download)
@@ -12,11 +16,20 @@ You'll need to install the following pre-requisites in order to build SAFE appli
 * [Node LTS](https://nodejs.org/en/download/) installed for the front end components.
 * If you're running on OSX or Linux, you'll also need to install [Mono](https://www.mono-project.com/docs/getting-started/install/).
 
+## Database connection
+The server side attempts to connect to a MS SQL SERVER database. The provider configurable, the code does not use any SQL SERVER specific features.
+
+The connection string is read usign an environment variable that must be prefilled at the production deployment server.
+The data model is created using the entity definitions in the folder [Models](https://github.com/T-Gro/VADET-Admin/tree/master/src/KnnResults.Domain/Models)
+```
+var conn = Environment.GetEnvironmentVariable("VADETSQL") ;
+```
+
 ## Work with the application
 
 To concurrently run the server and the client components in watch mode use the following command:
 
-```bash
+```
 fake build -t Run
 ```
 
@@ -31,7 +44,22 @@ You will find more documentation about the used F# components at the following p
 * [Fable.Remoting](https://zaid-ajaj.github.io/Fable.Remoting/)
 * [Fulma](https://fulma.github.io/Fulma/)
 
-If you want to know more about the full Azure Stack and all of it's components (including Azure) visit the official [SAFE documentation](https://safe-stack.github.io/docs/).
+## Client-server API
+
+The API between client (browser) and server (.NET running F# application) is documented in the project Shared.fs.
+It contains the data types and operations which are called from client to server and carry also the respective return types.
+Fsharp remoting handles the serialisation of the types to JSON strings on the wire over HTTPS.
+
+[API model](https://github.com/T-Gro/VADET-Admin/blob/master/src/Shared/Shared.fs)
+```
+type ICounterApi =
+    {       
+        load : unit -> Async<InitialDisplay>;
+        expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
+        acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
+        rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
+    }
+```
 
 ## Troubleshooting
 
