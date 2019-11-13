@@ -1,5 +1,6 @@
-﻿using ProtoBuf;
+using ProtoBuf;
 using System.Collections.Generic;
+using System.IO;
 
 namespace KnnResults.Domain
 {
@@ -8,5 +9,13 @@ namespace KnnResults.Domain
     {
         [ProtoMember(1)]
         public Dictionary<string, DistancesToOldImages[]> ResultsForNewImages { get; set; }
+
+        public static SimilarityGraph Load(string filename)
+        {
+            using (var file = File.OpenRead(filename))
+            {
+                return Serializer.Deserialize<SimilarityGraph>(file);
+            }
+        }
     }
 }

@@ -22,6 +22,7 @@ namespace KnnResults.Domain.Models
         public virtual DbSet<ZootBataProducts> ZootBataProducts { get; set; }
         public virtual DbSet<AttributeRejection> AttributeRejections { get; set; }
 
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -40,6 +41,8 @@ namespace KnnResults.Domain.Models
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasAnnotation("ProductVersion", "2.2.2-servicing-10034");
+
+            modelBuilder.Query<CandidatesOfAttributes>().ToView("VW_CANDIDATES_FROM_ACCEPTED_ATTRIBUTES");
 
             modelBuilder.Entity<ProductVisualAttributes>(entity =>
             {
@@ -65,7 +68,7 @@ namespace KnnResults.Domain.Models
             });
 
             modelBuilder.Entity<VisualAttributeDefinition>(entity =>
-            {
+            {                
                 entity.Property(e => e.Id).HasColumnName("ID");
 
                 entity.Property(e => e.Candidates).IsRequired();

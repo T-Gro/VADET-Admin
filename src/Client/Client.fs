@@ -38,6 +38,7 @@ let undefined : obj = jsNative
 type Model = 
     {          
         Candidates : AttributeCandidate list;
+        DynamicDbResults : AutoOfferedAttribute list;
         CurrentExpansion : AttributeExpansion option;
         PendingAjax : bool;
         ShowPatchesInModal : bool;
@@ -57,6 +58,7 @@ type Msg =
 | AjaxArrived
 | CloseModal
 | InitialisationArrived of Result<InitialDisplay,exn>
+| DynamicProposalsArrived of Result<DynamicDbProposals,exn>
 | SkipNeighbour of Neighbor
 | ToggleIgnore of string
 | ToggleShowPatches
@@ -97,13 +99,14 @@ let init () : Model * Cmd<Msg> =
 
     let initialModel = {       
         Candidates = [];
+        DynamicDbResults = [];
         CurrentExpansion = None;
         PendingAjax = false;
         ShowPatchesInModal = true;
         SortAlphabetically = false;
         CategoriesSwitchedToWhitelist = false}
 
-    let cmd =  ajax  Server.api.load () InitialisationArrived
+    let cmd =  ajax  Server.api.loadDynamicDb () DynamicProposalsArrived   // ajax  Server.api.load () InitialisationArrived
     initialModel, cmd
 
 let handleError (e:exn) origMsg currentModel =
@@ -139,6 +142,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         {currentModel with CurrentExpansion = None}, Cmd.none
     | _, InitialisationArrived (Ok(init)) ->
         {currentModel with Candidates = init.Candidates}, Cmd.ofMsg AjaxArrived
+    | _, DynamicProposalsArrived (Ok(results)) ->
+        {currentModel with DynamicDbResults = results.ProductAttributePairs}, Cmd.ofMsg AjaxArrived
     | _, FreshDataArrived (Ok(cand)) ->
         {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c); CurrentExpansion = None  }, Cmd.ofMsg AjaxArrived
     | _, ExpansionArrived (Ok(expansion)) ->
@@ -182,7 +187,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             } FreshDataArrived
         else
             currentModel, Cmd.none
-    | _, InitialisationArrived(Error(e)) -> handleError e msg currentModel        
+    | _, InitialisationArrived(Error(e)) -> handleError e msg currentModel
+    | _, DynamicProposalsArrived(Error(e)) -> handleError e msg currentModel
     | _, ExpansionArrived(Error(e)) -> handleError e msg currentModel
     | _, FreshDataArrived(Error(e)) -> handleError e msg currentModel
     | _, ToggleShowPatches -> {currentModel with ShowPatchesInModal = not currentModel.ShowPatchesInModal}, Cmd.none
@@ -233,16 +239,19 @@ let shortStatusName  = function
     | Offered -> str("Offered")
     | Accepted(_,name) -> span [] [str("Accepted");br[];str(name)]
     | Rejected(_,_) -> str("Rejected")
+    | AutoOffered -> str("Calculated")
 
 let statusColor  = function
     | Offered -> [ClassName "has-background-grey"]
     | Accepted(_,_) -> [ ClassName "has-background-success"]
     | Rejected(_,_) -> [ ClassName "has-background-danger" ]
+    | AutoOffered -> [ ClassName "has-background-success"]
 
 let statusOrder  = function
     | Offered -> 1
     | Accepted(_,_) -> 0
     | Rejected(_,_) -> 2
+    | AutoOffered -> 3
 
 
 
@@ -331,6 +340,14 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                     ][ ]
             ]    
 
+let renderDynamicDbResult (d: AutoOfferedAttribute) =
+    tr (statusColor(AttributeStatus.AutoOffered) |> Seq.cast<IHTMLProp>)
+        [
+            yield td [] [shortStatusName(AttributeStatus.AutoOffered)]
+            yield td [] [str(sprintf "%d : %s" d.OldId d.Name)]
+            yield td [] [yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-2019/"+ extractImgId d.NewImage) ]]
+        ]
+
 let renderCandidate (c:AttributeCandidate) (smallButton) =
   tr (statusColor(c.Status) |> Seq.cast<IHTMLProp>)
     [ 
@@ -373,7 +390,7 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                 Table.IsNarrow
                                 Table.IsStriped ]
                               [ tbody [ ]
-                                  [ for c in model.Candidates  ->
+                                  [ for c in model.Candidates  ->  //.Candidates  ->
                                       renderCandidate c smallButton ] ] ] 
                       ]
                   Card.footer [ ]

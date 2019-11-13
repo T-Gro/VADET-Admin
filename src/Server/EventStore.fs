@@ -75,6 +75,7 @@ module EventStore
         let saved = dbContext.SaveChanges()        
         printfn "Rejected = %i " saved
 
+
         {Time = r.Time; Data = rej.Reason}    
         
         

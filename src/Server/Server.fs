@@ -11,6 +11,9 @@ open System
 
 
 let load () = task{   return  { Candidates = PatchProposals.loadInitialDisplay()}  }
+let loadDynamicDbMatches () = task{   return  PatchProposals.loadNewProductMatches() }
+
+
 let reject (rejection:RejectionOfAttribute) = task {
     let ev = EventStore.reject rejection
     return {
@@ -34,7 +37,8 @@ let counterApi = {
     load = load >> Async.AwaitTask;
     rejectOfferedAttribute = reject >> Async.AwaitTask;
     acceptNewAttribute = accept >> Async.AwaitTask;
-    expandCandidate = expand >> Async.AwaitTask
+    expandCandidate = expand >> Async.AwaitTask;
+    loadDynamicDb = loadDynamicDbMatches >> Async.AwaitTask
 }
 
 type CustomError = { errorMsg: string }

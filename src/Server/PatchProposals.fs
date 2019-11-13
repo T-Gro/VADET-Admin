@@ -1,13 +1,74 @@
 module PatchProposals 
     open KnnResults.Domain
+    open KnnResults.Domain.Models
     open System.Configuration
     open Shared
     open System
+    open System.Text.RegularExpressions
+    open System.Globalization
+    open FSharp.Text.RegexProvider
+
+    type NewProductCodeRegex = Regex< @"^(?<GridSize>\dx\d)_(?<ImageName>.*)\-(?<PatchId>\d+)$" >
 
     let Loaded = AllResults.Load(ConfigurationManager.AppSettings.["FilteredPatchesBin"])    
     let NameMap = Loaded.ImageEncoding |> Seq.map (fun kvp -> (kvp.Value,kvp.Key)) |> Map.ofSeq
     let PatchMap = Loaded.PatchEncoding |> Seq.map (fun kvp -> (kvp.Value,kvp.Key)) |> Map.ofSeq
     let IdMap = Loaded.Rows |> Seq.mapi (fun i x -> (x.Query, i)) |> dict
+
+    let SimilaritiesToNewProducts = SimilarityGraph.Load(ConfigurationManager.AppSettings.["NewProductSimilarities"])
+    let CurrentLayer = ConfigurationManager.AppSettings.["AlexnetLayer"] 
+
+    let loadNewProductMatches() =
+        use dbCtx = new VADETContext()
+        let existingAttrs =
+            query {
+                for a in dbCtx.VisualAttributeDefinition do
+                    where (a.AttributeSource.Contains(CurrentLayer))
+                    select a
+            } |> Seq.toList
+
+        let imagePatches =
+            query {
+                for coa in dbCtx.Query<CandidatesOfAttributes>() do
+                    join attr in dbCtx.VisualAttributeDefinition  on (coa.Id = attr.Id)
+                    where (attr.AttributeSource.Contains(CurrentLayer))
+                    select coa
+            } |> Seq.groupBy (fun x -> x.Id) |> dict
+
+
+
+        let parseNewId s =
+            let parts = NewProductCodeRegex().TypedMatch(s)
+            (ImageId(parts.ImageName.Value),PatchId(parts.GridSize.Value + "@" + parts.PatchId.Value))
+
+        let newProducts =
+            SimilaritiesToNewProducts.ResultsForNewImages
+            |> Seq.map (fun kv -> (parseNewId kv.Key, kv.Value) )
+            |> Seq.groupBy (fst >> fst)
+            |> Map.ofSeq
+
+        let proposals =
+            seq{
+                for p in newProducts do
+                for ea in existingAttrs do
+                let patches = imagePatches.[ea.Id] |> Seq.map (fun x -> x.PatchName) 
+                let minDistances =
+                    patches
+                    |> Seq.map (
+                        fun oldPatch ->
+                            p.Value
+                            |> Seq.collect (fun x -> snd x)
+                            |> Seq.filter (fun x -> x.OldPatchName = oldPatch )
+                            |> Seq.map (fun x -> x.Distance)
+                            |> Seq.min)
+                let avg = minDistances |> Seq.average |> float
+                if avg < ea.DistanceTreshold.Value then
+                    yield {OldId = ea.Id; Name = ea.Name; NewImage = p.Key}    
+            }
+
+        {ProductAttributePairs = proposals |> Seq.toList}
+
+
 
 
     let loadInitialDisplay() =

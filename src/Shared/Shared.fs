@@ -13,13 +13,15 @@ type AttributeStatus =
     |Offered 
     |Rejected of DateTime * string
     |Accepted of DateTime * string
+    |AutoOffered
 type AttributeCandidate = {Id : int; Representatives : ImagePatch list; Status : AttributeStatus}
 type InitialDisplay = {Candidates : AttributeCandidate list}
 type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string; Username : string}
 type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list; IgnoredCategories : string list}
 type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list; Quality : string; Username : string}
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
-
+type AutoOfferedAttribute = {OldId : int; Name : string; NewImage : Image}
+type DynamicDbProposals = {ProductAttributePairs : AutoOfferedAttribute list}
 
 module Common =
     let extractImgId (ImageId x) = x
@@ -46,4 +48,5 @@ type ICounterApi =
         expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
         acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
         rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
+        loadDynamicDb : unit -> Async<DynamicDbProposals>
     }
