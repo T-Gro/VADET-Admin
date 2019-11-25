@@ -257,7 +257,7 @@ let statusOrder  = function
 
 let renderImageWithPatches image patches   =
     div [ClassName("img-container")] [
-        yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-cropped/"+ extractImgId image) ]
+        yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-cropped/"+ extractImgId image ) ]
         for p in patches |> Seq.distinct do
         let patchId = extractPatchId p
         let coordParts = patchId.Split([|'_';'@'|])
@@ -345,7 +345,7 @@ let renderDynamicDbResult (d: AutoOfferedAttribute) =
         [
             yield td [] [shortStatusName(AttributeStatus.AutoOffered)]
             yield td [] [str(sprintf "%d : %s" d.OldId d.Name)]
-            yield td [] [yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-2019/"+ extractImgId d.NewImage) ]]
+            yield td [] [yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-2019/"+ extractImgId d.NewImage + ".jpg") ]]
         ]
 
 let renderCandidate (c:AttributeCandidate) (smallButton) =
@@ -390,8 +390,8 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                 Table.IsNarrow
                                 Table.IsStriped ]
                               [ tbody [ ]
-                                  [ for c in model.Candidates  ->  //.Candidates  ->
-                                      renderCandidate c smallButton ] ] ] 
+                                  [ for c in model.DynamicDbResults  ->  //.Candidates  ->
+                                      renderDynamicDbResult c  ] ] ] 
                       ]
                   Card.footer [ ]
                       [ Card.Footer.div [ ]

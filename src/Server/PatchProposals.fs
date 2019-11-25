@@ -46,6 +46,7 @@ module PatchProposals
         let newProducts =
             SimilaritiesToNewProducts.ResultsForNewImages
             |> Seq.map (fun kv -> (parseNewId kv.Key, kv.Value) )
+            |> Seq.filter (fun ((ImageId i,p),d) -> not(String.IsNullOrWhiteSpace(i)))
             |> Seq.groupBy (fst >> fst)
             |> Map.ofSeq
 
@@ -65,7 +66,7 @@ module PatchProposals
                             |> Seq.append [(if SimilaritiesToNewProducts.OldNameTreshold512.ContainsKey(oldPatch) then SimilaritiesToNewProducts.OldNameTreshold512.Item(oldPatch) else 999.0f)]                         
                             |> Seq.min)
                 let avg = minDistances |> Seq.average |> float
-                if (avg*0.75) <= ea.DistanceTreshold.Value then
+                if (avg) <= ea.DistanceTreshold.Value then
                     yield {OldId = ea.Id; Name = ea.Name; NewImage = p.Key}    
             } |> Seq.toList
 
