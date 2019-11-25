@@ -345,7 +345,7 @@ let renderDynamicDbResult (d: AutoOfferedAttribute) =
         [
             yield td [] [shortStatusName(AttributeStatus.AutoOffered)]
             yield td [] [str(sprintf "%d : %s" d.OldId d.Name)]
-            yield td [] [yield img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-2019/"+ extractImgId d.NewImage + ".jpg") ]]
+            yield td [] [yield Image.image [ Image.Is128x128 ] [ div [ClassName("img-container")] [ img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-2019/"+ extractImgId d.NewImage + ".jpg") ]]]]
         ]
 
 let renderCandidate (c:AttributeCandidate) (smallButton) =
