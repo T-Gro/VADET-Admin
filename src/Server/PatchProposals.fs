@@ -16,7 +16,9 @@ module PatchProposals
     let IdMap = Loaded.Rows |> Seq.mapi (fun i x -> (x.Query, i)) |> dict
 
     let SimilaritiesToNewProducts = SimilarityGraph.Load(ConfigurationManager.AppSettings.["NewProductSimilarities"])
-    let CurrentLayer = ConfigurationManager.AppSettings.["AlexnetLayer"]  
+    let CurrentLayer = ConfigurationManager.AppSettings.["AlexnetLayer"]
+
+    let inline DefaultIfEmpty d l = System.Linq.Enumerable.DefaultIfEmpty(l, d)
 
     let loadNewProductMatches() =
         use dbCtx = new VADETContext()
@@ -60,9 +62,10 @@ module PatchProposals
                             |> Seq.collect (fun x -> snd x)
                             |> Seq.filter (fun x -> x.OldPatchName = oldPatch )
                             |> Seq.map (fun x -> x.Distance)
+                            |> Seq.append [(if SimilaritiesToNewProducts.OldNameTreshold512.ContainsKey(oldPatch) then SimilaritiesToNewProducts.OldNameTreshold512.Item(oldPatch) else 999.0f)]                         
                             |> Seq.min)
                 let avg = minDistances |> Seq.average |> float
-                if avg < ea.DistanceTreshold.Value then
+                if (avg*0.75) <= ea.DistanceTreshold.Value then
                     yield {OldId = ea.Id; Name = ea.Name; NewImage = p.Key}    
             } |> Seq.toList
 
