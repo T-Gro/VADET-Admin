@@ -63,11 +63,11 @@ module PatchProposals
                             |> Seq.collect (fun x -> snd x)
                             |> Seq.filter (fun x -> x.OldPatchName = oldPatch )
                             |> Seq.map (fun x -> x.Distance)
-                            |> Seq.append [(if SimilaritiesToNewProducts.OldNameTreshold512.ContainsKey(oldPatch) then SimilaritiesToNewProducts.OldNameTreshold512.Item(oldPatch) else 999.0f)]                         
+                            |> DefaultIfEmpty (SimilaritiesToNewProducts.OldNameTreshold512.[oldPatch] * 1.1f)                                                   
                             |> Seq.min)
                 let avg = minDistances |> Seq.average |> float
                 if (avg) <= ea.DistanceTreshold.Value then
-                    yield {OldId = ea.Id; Name = ea.Name; NewImage = p.Key}    
+                    yield {OldId = ea.Id; Name = ea.Name; NewImage = p.Key; OriginalTreshold = ea.DistanceTreshold.Value; DistanceToAttribute = avg; OriginalBlacklist = ea.DiscardedCategories; OriginalWhitelist = ea.WhitelistedCategories}    
             } |> Seq.toList
 
         {ProductAttributePairs = proposals }

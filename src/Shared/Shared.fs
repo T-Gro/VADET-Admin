@@ -20,7 +20,7 @@ type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string; Usern
 type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list; IgnoredCategories : string list}
 type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list; Quality : string; Username : string}
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
-type AutoOfferedAttribute = {OldId : int; Name : string; NewImage : Image}
+type AutoOfferedAttribute = {OldId : int; Name : string; NewImage : Image; OriginalTreshold : float; DistanceToAttribute : float; OriginalWhitelist : string; OriginalBlacklist : string}
 type DynamicDbProposals = {ProductAttributePairs : AutoOfferedAttribute list}
 
 module Common =

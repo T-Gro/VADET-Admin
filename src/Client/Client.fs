@@ -143,7 +143,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, InitialisationArrived (Ok(init)) ->
         {currentModel with Candidates = init.Candidates}, Cmd.ofMsg AjaxArrived
     | _, DynamicProposalsArrived (Ok(results)) ->
-        {currentModel with DynamicDbResults = results.ProductAttributePairs}, Cmd.ofMsg AjaxArrived
+        {currentModel with DynamicDbResults = results.ProductAttributePairs |> List.sortBy (fun x -> x.OldId)}, Cmd.ofMsg AjaxArrived
     | _, FreshDataArrived (Ok(cand)) ->
         {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c); CurrentExpansion = None  }, Cmd.ofMsg AjaxArrived
     | _, ExpansionArrived (Ok(expansion)) ->
@@ -345,7 +345,11 @@ let renderDynamicDbResult (d: AutoOfferedAttribute) =
         [
             yield td [] [shortStatusName(AttributeStatus.AutoOffered)]
             yield td [] [str(sprintf "%d : %s" d.OldId d.Name)]
+            yield td [] [str(sprintf "TS: %.3f" d.OriginalTreshold)]
+            yield td [] [str(sprintf "Dist: %.3f" d.DistanceToAttribute)]
             yield td [] [yield Image.image [ Image.Is128x128 ] [ div [ClassName("img-container")] [ img [ Src ("http://herkules.ms.mff.cuni.cz/vadet-merged/images-cropped/images-2019/"+ extractImgId d.NewImage + ".jpg") ]]]]
+            if not(String.IsNullOrWhiteSpace(d.OriginalBlacklist)) then yield td [] [str(sprintf "Blacklist : %s" d.OriginalBlacklist)]
+            if not(String.IsNullOrWhiteSpace(d.OriginalWhitelist)) then yield td [] [str(sprintf "Whitelist : %s" d.OriginalWhitelist)]
         ]
 
 let renderCandidate (c:AttributeCandidate) (smallButton) =
