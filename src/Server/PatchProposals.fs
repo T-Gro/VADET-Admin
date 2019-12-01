@@ -55,6 +55,21 @@ module PatchProposals
             |> Seq.groupBy (fst >> fst)
             |> Map.ofSeq
 
+        let getFinalStatus (existing : VisualAttributeDefinition) (ImageId(newName)) =
+            let (anything,labels) = labelsForNewProducts.TryGetValue newName
+            if existing.DiscardedCategories <> null then
+                if (anything && labels.IsMentionedIn(existing.DiscardedCategories)) then                   
+                        AttributeStatus.OfferedButBlacklisted
+                    else
+                        AttributeStatus.AutoOffered
+            else
+                if(anything && labels.IsMentionedIn(existing.WhitelistedCategories)) then
+                    AttributeStatus.AutoOffered
+                else
+                    AttributeStatus.OfferedButNotWhitelisted
+
+
+
         let proposals =
             seq{
                 for p in newProducts do
@@ -80,7 +95,7 @@ module PatchProposals
                         DistanceToAttribute = avg;
                         OriginalBlacklist = ea.DiscardedCategories;
                         OriginalWhitelist = ea.WhitelistedCategories;
-                        Status = AttributeStatus.AutoOffered}    
+                        Status = getFinalStatus ea p.Key}    
             } |> Seq.toList
 
         {ProductAttributePairs = proposals }
