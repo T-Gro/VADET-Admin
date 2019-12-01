@@ -29,6 +29,11 @@ module PatchProposals
                     select a
             } |> Seq.toList
 
+        let labelsForNewProducts =
+            dbCtx.Query<NewProductLabels>()
+            |> Seq.map (fun npl -> (npl.ProductId, npl))
+            |> dict
+
         let imagePatches =
             query {
                 for coa in dbCtx.Query<CandidatesOfAttributes>() do

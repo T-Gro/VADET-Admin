@@ -43,6 +43,7 @@ namespace KnnResults.Domain.Models
             modelBuilder.HasAnnotation("ProductVersion", "2.2.2-servicing-10034");
 
             modelBuilder.Query<CandidatesOfAttributes>().ToView("VW_CANDIDATES_FROM_ACCEPTED_ATTRIBUTES");
+            modelBuilder.Query<NewProductLabels>().ToView("VW_Bata2019_Translations");
 
             modelBuilder.Entity<ProductVisualAttributes>(entity =>
             {
