@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace KnnResults.Domain.Models
 {
     public partial class NewProductLabels
     {
         static char[] PipeSplitter = new char[] { '|' };
+        static char[] CollectionSplitter = new char[] { ';', '"', '[', ']' };
 
         public string ProductId { get; set; }
         public string PipeDeliminitedEnglishNames { get; set; }
@@ -16,9 +19,12 @@ namespace KnnResults.Domain.Models
             if (collection == null || collection == "[]")
                 return false;
 
+            var splitted = collection.Split(CollectionSplitter, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
+            var set = new HashSet<string>(splitted, StringComparer.OrdinalIgnoreCase);
+                        
             foreach (var n in this.Names)
             {
-                if (collection.IndexOf(n, StringComparison.InvariantCultureIgnoreCase) >= 0)
+                if (set.Contains(n))
                     return true;
             }
 
