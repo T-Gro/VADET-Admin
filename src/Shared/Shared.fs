@@ -14,13 +14,15 @@ type AttributeStatus =
     |Rejected of DateTime * string
     |Accepted of DateTime * string
     |AutoOffered
+    |OfferedButBlacklisted
+    |OfferedButNotWhitelisted
 type AttributeCandidate = {Id : int; Representatives : ImagePatch list; Status : AttributeStatus}
 type InitialDisplay = {Candidates : AttributeCandidate list}
 type RejectionOfAttribute = {Subject: AttributeCandidate; Reason : string; Username : string}
 type AttributeExpansion = {Candidate : AttributeCandidate; Neighbors : Neighbor list; IgnoredCategories : string list}
 type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neighbor list; NewName : string; IgnoredCategories : string list; Quality : string; Username : string}
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
-type AutoOfferedAttribute = {OldId : int; Name : string; NewImage : Image; OriginalTreshold : float; DistanceToAttribute : float; OriginalWhitelist : string; OriginalBlacklist : string}
+type AutoOfferedAttribute = {OldId : int; Name : string; NewImage : Image; OriginalTreshold : float; DistanceToAttribute : float; OriginalWhitelist : string; OriginalBlacklist : string; Status : AttributeStatus}
 type DynamicDbProposals = {ProductAttributePairs : AutoOfferedAttribute list}
 
 module Common =

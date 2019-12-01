@@ -67,7 +67,15 @@ module PatchProposals
                             |> Seq.min)
                 let avg = minDistances |> Seq.average |> float
                 if (avg) <= ea.DistanceTreshold.Value then
-                    yield {OldId = ea.Id; Name = ea.Name; NewImage = p.Key; OriginalTreshold = ea.DistanceTreshold.Value; DistanceToAttribute = avg; OriginalBlacklist = ea.DiscardedCategories; OriginalWhitelist = ea.WhitelistedCategories}    
+                    yield {
+                        OldId = ea.Id;
+                        Name = ea.Name;
+                        NewImage = p.Key;
+                        OriginalTreshold = ea.DistanceTreshold.Value;
+                        DistanceToAttribute = avg;
+                        OriginalBlacklist = ea.DiscardedCategories;
+                        OriginalWhitelist = ea.WhitelistedCategories;
+                        Status = AttributeStatus.AutoOffered}    
             } |> Seq.toList
 
         {ProductAttributePairs = proposals }

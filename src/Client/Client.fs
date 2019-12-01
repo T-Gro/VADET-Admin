@@ -240,18 +240,24 @@ let shortStatusName  = function
     | Accepted(_,name) -> span [] [str("Accepted");br[];str(name)]
     | Rejected(_,_) -> str("Rejected")
     | AutoOffered -> str("Calculated")
+    | OfferedButBlacklisted -> str("Blacklisted")
+    | OfferedButNotWhitelisted -> str("Not on Whitelist")
 
 let statusColor  = function
     | Offered -> [ClassName "has-background-grey"]
     | Accepted(_,_) -> [ ClassName "has-background-success"]
     | Rejected(_,_) -> [ ClassName "has-background-danger" ]
     | AutoOffered -> [ ClassName "has-background-success"]
+    | OfferedButBlacklisted -> [ ClassName "has-background-danger"]
+    | OfferedButNotWhitelisted -> [ ClassName "has-background-danger"]
 
 let statusOrder  = function
     | Offered -> 1
     | Accepted(_,_) -> 0
     | Rejected(_,_) -> 2
     | AutoOffered -> 3
+    | OfferedButBlacklisted -> 4
+    | OfferedButNotWhitelisted -> 5
 
 
 
@@ -341,9 +347,9 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
             ]    
 
 let renderDynamicDbResult (d: AutoOfferedAttribute) =
-    tr (statusColor(AttributeStatus.AutoOffered) |> Seq.cast<IHTMLProp>)
+    tr (statusColor(d.Status) |> Seq.cast<IHTMLProp>)
         [
-            yield td [] [shortStatusName(AttributeStatus.AutoOffered)]
+            yield td [] [shortStatusName(d.Status)]
             yield td [] [str(sprintf "%d : %s" d.OldId d.Name)]
             yield td [] [str(sprintf "TS: %.3f" d.OriginalTreshold)]
             yield td [] [str(sprintf "Dist: %.3f" d.DistanceToAttribute)]
