@@ -22,6 +22,8 @@ namespace KnnResults.Domain.Models
         public virtual DbSet<ZootBataProducts> ZootBataProducts { get; set; }
         public virtual DbSet<AttributeRejection> AttributeRejections { get; set; }
 
+        public virtual DbSet<OfferedAttributeReaction> OfferedAttributeReaction { get; set; }
+
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -66,6 +68,26 @@ namespace KnnResults.Domain.Models
                     .HasForeignKey(d => d.ProductId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_ProductVisualAttributes_ZootBataProducts");
+            });
+
+            modelBuilder.Entity<OfferedAttributeReaction>(entity => {
+                entity.Property(e => e.Id).HasColumnName("ID");
+                entity.Property(e => e.AttributeId).IsRequired();
+                entity.Property(e => e.ImageId)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                entity.Property(e => e.User)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                entity.Property(e => e.ReactionStatus)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("(getdate())");
+
+                entity.HasIndex(e => new { e.ImageId, e.AttributeId}).IsUnique();
             });
 
             modelBuilder.Entity<VisualAttributeDefinition>(entity =>

@@ -29,6 +29,8 @@ module PatchProposals
                     select a
             } |> Seq.toList
 
+        let existingResults = dbCtx.OfferedAttributeReaction |> Seq.toList
+
         let labelsForNewProducts =
             dbCtx.Query<NewProductLabels>()
             |> Seq.map (fun npl -> (npl.ProductId, npl))
@@ -56,8 +58,15 @@ module PatchProposals
             |> Map.ofSeq
 
         let getFinalStatus (existing : VisualAttributeDefinition) (ImageId(newName)) =
+            let dbResults = existingResults |> List.filter (fun e-> e.ImageId = newName && e.AttributeId = existing.Id)
             let (anything,labels) = labelsForNewProducts.TryGetValue newName
-            if existing.DiscardedCategories <> null then
+            if (dbResults |> List.length) > 0 then
+                let res = dbResults.Head
+                if res.ReactionStatus.Contains("Acc") then
+                    AttributeStatus.Accepted(res.CreatedAt, res.User)
+                else
+                    AttributeStatus.Rejected(res.CreatedAt, res.User)
+            else if existing.DiscardedCategories <> null then
                 if (anything && labels.IsMentionedIn(existing.DiscardedCategories)) then                   
                         AttributeStatus.OfferedButBlacklisted
                     else
@@ -115,8 +124,8 @@ module PatchProposals
                 let (isRej,rej) = rejectedSoFar.TryGetValue id
                 let (isAcc,acc) = acceptedSoFar.TryGetValue id
                 match (isRej,isAcc) with
-                    | (true,false) -> Rejected(rej |> snd, rej |> fst) 
-                    | (_,true) -> Accepted(fst acc, snd acc)
+                    | (true,false) -> AttributeStatus.Rejected(rej |> snd, rej |> fst) 
+                    | (_,true) -> AttributeStatus.Accepted(fst acc, snd acc)
                     | _ -> Offered       
 
             {Representatives = imgs; Status = status; Id = id}

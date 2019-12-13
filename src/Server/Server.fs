@@ -16,16 +16,15 @@ let loadDynamicDbMatches () = task{   return  PatchProposals.loadNewProductMatch
 
 let reject (rejection:RejectionOfAttribute) = task {
     let ev = EventStore.reject rejection
-    return {
-                rejection.Subject with Status = Rejected(ev.Time, rejection.Reason)                
-            }}
+    return {rejection.Subject with Status = AttributeStatus.Rejected(ev.Time, rejection.Reason)}}
 
-let accept (acc:AcceptedAttribute) = task {
+let accept (acc:AcceptedAttribute) =
+    task {
     let ev = EventStore.accept acc
-    return {                
-                acc.Candidate with Status = Accepted(ev.CreatedAt.Value,ev.Name)                
-            }}
+    return {acc.Candidate with Status = AttributeStatus.Accepted(ev.CreatedAt.Value,ev.Name)}}
 
+
+let react (r : OfferReaction) = task { return EventStore.processOfferReaction r }
 
 let expand cand = task {
         return {
@@ -38,7 +37,8 @@ let counterApi = {
     rejectOfferedAttribute = reject >> Async.AwaitTask;
     acceptNewAttribute = accept >> Async.AwaitTask;
     expandCandidate = expand >> Async.AwaitTask;
-    loadDynamicDb = loadDynamicDbMatches >> Async.AwaitTask
+    loadDynamicDb = loadDynamicDbMatches >> Async.AwaitTask;
+    reactOnOffer = react  >> Async.AwaitTask;
 }
 
 type CustomError = { errorMsg: string }

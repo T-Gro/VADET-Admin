@@ -6,6 +6,8 @@
   <ItemGroup>
     <Compile Remove="Migrations\20190330173126_AttributeRejections.cs" />
     <Compile Remove="Migrations\20190330200422_UniqueConstraintsAdded.cs" />
+    <Compile Remove="Migrations\20191213081618_OfferedProductAcceptance.cs" />
+    <Compile Remove="Migrations\20191213081618_OfferedProductAcceptance.Designer.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="12.1.2" />

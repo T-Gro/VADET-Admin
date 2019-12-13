@@ -64,6 +64,9 @@ type Msg =
 | ToggleShowPatches
 | ToggleCategorySortMode
 | ToggleCategorySelectionMeaning
+| AcceptOffer of AutoOfferedAttribute
+| RejectOffer of AutoOfferedAttribute
+| FreshOfferDataArrived of Result<OfferFreshData,exn>
 
 module Server =
     open Fable.Remoting.Client
@@ -146,6 +149,11 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         {currentModel with DynamicDbResults = results.ProductAttributePairs |> List.sortBy (fun x -> x.OldId)}, Cmd.ofMsg AjaxArrived
     | _, FreshDataArrived (Ok(cand)) ->
         {currentModel with Candidates = currentModel.Candidates |> List.map (fun c -> if c.Id = cand.Id then cand else c); CurrentExpansion = None  }, Cmd.ofMsg AjaxArrived
+    | _, FreshOfferDataArrived(Ok(off)) ->
+        let newResults =
+            currentModel.DynamicDbResults
+            |> List.map (fun c -> if c.NewImage = off.NewImage && c.OldId = off.OldId then {c with Status = off.Status} else c)
+        {currentModel with DynamicDbResults = newResults; CurrentExpansion = None  }, Cmd.ofMsg AjaxArrived
     | _, ExpansionArrived (Ok(expansion)) ->
         {currentModel with CurrentExpansion = Some expansion}, Cmd.ofMsg AjaxArrived
     | _, RejectWithReason(cand) ->
@@ -154,7 +162,13 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             lastReason <- reason
             currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = reason; Username = userName} FreshDataArrived
         else
-            currentModel, Cmd.none
+            currentModel, Cmd.none 
+    | _, AcceptOffer(off) ->
+        let payload = {Reaction = AcceptingOffer; DistanceToAttribute = off.DistanceToAttribute; OldId = off.OldId; NewImage = off.NewImage; Username = userName}
+        currentModel, ajax Server.api.reactOnOffer payload  FreshOfferDataArrived
+    | _, RejectOffer(off) ->
+        let payload = {Reaction = RejectingOffer; DistanceToAttribute = off.DistanceToAttribute; OldId = off.OldId; NewImage = off.NewImage; Username = userName}
+        currentModel, ajax Server.api.reactOnOffer payload  FreshOfferDataArrived
     | _, Reject(cand) ->
         //let reason = promptDialog("Please provide reason for rejection","Not meaningful as an attribute")
         currentModel, ajax Server.api.rejectOfferedAttribute  {Subject = cand; Reason = "Not meaningful"; Username = userName} FreshDataArrived
@@ -191,6 +205,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, DynamicProposalsArrived(Error(e)) -> handleError e msg currentModel
     | _, ExpansionArrived(Error(e)) -> handleError e msg currentModel
     | _, FreshDataArrived(Error(e)) -> handleError e msg currentModel
+    | _, FreshOfferDataArrived(Error(e)) -> handleError e msg currentModel
     | _, ToggleShowPatches -> {currentModel with ShowPatchesInModal = not currentModel.ShowPatchesInModal}, Cmd.none
     | _, ToggleCategorySortMode -> {currentModel with SortAlphabetically = not currentModel.SortAlphabetically}, Cmd.none
     | _, ToggleCategorySelectionMeaning -> {currentModel with CategoriesSwitchedToWhitelist = not currentModel.CategoriesSwitchedToWhitelist}, Cmd.none
@@ -238,7 +253,7 @@ let hero =
 let shortStatusName  = function
     | Offered -> str("Offered")
     | Accepted(_,name) -> span [] [str("Accepted");br[];str(name)]
-    | Rejected(_,_) -> str("Rejected")
+    | Rejected(_,name) -> span [] [str("Rejected");br[];str(name)]
     | AutoOffered -> str("Calculated")
     | OfferedButBlacklisted -> str("Blacklisted")
     | OfferedButNotWhitelisted -> str("Not on Whitelist")
@@ -257,7 +272,7 @@ let statusOrder  = function
     | Rejected(_,_) -> 2
     | AutoOffered -> 3
     | OfferedButBlacklisted -> 4
-    | OfferedButNotWhitelisted -> 5
+    | OfferedButNotWhitelisted -> 5   
 
 
 
@@ -346,10 +361,13 @@ let expandedModal (model: Model) (dispatch: Msg -> unit) =
                     ][ ]
             ]    
 
-let renderDynamicDbResult (d: AutoOfferedAttribute) =
+let renderDynamicDbResult (d: AutoOfferedAttribute) (smallButton) =
     tr (statusColor(d.Status) |> Seq.cast<IHTMLProp>)
         [
             yield td [] [shortStatusName(d.Status)]
+            if d.Status = AutoOffered then
+                yield smallButton "Accept" (AcceptOffer(d) ) IsPrimary
+                yield smallButton "Reject" (RejectOffer(d)) IsDanger
             yield td [] [str(sprintf "%d : %s" d.OldId d.Name)]
             yield td [] [str(sprintf "TS: %.3f" d.OriginalTreshold)]
             yield td [] [str(sprintf "Dist: %.3f" d.DistanceToAttribute)]
@@ -401,7 +419,7 @@ let columns (model : Model) (dispatch : Msg -> unit) =
                                 Table.IsStriped ]
                               [ tbody [ ]
                                   [ for c in model.DynamicDbResults  ->  //.Candidates  ->
-                                      renderDynamicDbResult c  ] ] ] 
+                                      renderDynamicDbResult c smallButton  ] ] ] 
                       ]
                   Card.footer [ ]
                       [ Card.Footer.div [ ]

@@ -4,14 +4,16 @@ using KnnResults.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace KnnResults.Domain.Migrations
 {
     [DbContext(typeof(VADETContext))]
-    partial class VADETContextModelSnapshot : ModelSnapshot
+    [Migration("20191213082053_OfferedProductAcceptanceFix")]
+    partial class OfferedProductAcceptanceFix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,7 +63,7 @@ namespace KnnResults.Domain.Migrations
 
                     b.Property<int>("AttributeId");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");

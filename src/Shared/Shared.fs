@@ -24,6 +24,9 @@ type AcceptedAttribute = {Candidate : AttributeCandidate; AcceptedMatches : Neig
 type RelationalResults = {ObjectsWithAttributes : (Image * TextAttribute list) list}
 type AutoOfferedAttribute = {OldId : int; Name : string; NewImage : Image; OriginalTreshold : float; DistanceToAttribute : float; OriginalWhitelist : string; OriginalBlacklist : string; Status : AttributeStatus}
 type DynamicDbProposals = {ProductAttributePairs : AutoOfferedAttribute list}
+type OfferReactionStatus = AcceptingOffer | RejectingOffer
+type OfferReaction = {OldId : int; NewImage : Image; Username : string; Reaction : OfferReactionStatus; DistanceToAttribute : float }
+type OfferFreshData =  {OldId : int; NewImage : Image;Status : AttributeStatus} 
 
 module Common =
     let extractImgId (ImageId x) = x
@@ -50,5 +53,6 @@ type ICounterApi =
         expandCandidate : AttributeCandidate -> Async<AttributeExpansion>;
         acceptNewAttribute : AcceptedAttribute -> Async<AttributeCandidate>;
         rejectOfferedAttribute : RejectionOfAttribute -> Async<AttributeCandidate>;
-        loadDynamicDb : unit -> Async<DynamicDbProposals>
+        loadDynamicDb : unit -> Async<DynamicDbProposals>;
+        reactOnOffer : OfferReaction -> Async<OfferFreshData>;
     }

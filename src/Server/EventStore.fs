@@ -76,6 +76,27 @@ module EventStore
         printfn "Rejected = %i " saved
 
 
-        {Time = r.Time; Data = rej.Reason}    
+        {Time = r.Time; Data = rej.Reason}
+
+    let processOfferReaction (off : OfferReaction) =
+        let unpack (ImageId(s)) = s
+
+        use dbContext = new VADETContext()
+        let r = new OfferedAttributeReaction()
+        r.User <- off.Username
+        r.AttributeId <- off.OldId
+        r.DistanceToAttribute <- off.DistanceToAttribute
+        r.ImageId <- unpack off.NewImage
+        r.ReactionStatus <- sprintf "%A" off.Reaction
+
+        dbContext.OfferedAttributeReaction.Add r |> ignore
+        let saved = dbContext.SaveChanges()  
+        printfn "Offer saved  = %A " off
+
+        let newStatus = function
+            | AcceptingOffer -> AttributeStatus.Accepted(DateTime.Now,r.User)
+            | RejectingOffer -> AttributeStatus.Rejected(DateTime.Now,r.User)
+
+        {OldId = off.OldId; NewImage = off.NewImage; Status = newStatus off.Reaction}
         
         
