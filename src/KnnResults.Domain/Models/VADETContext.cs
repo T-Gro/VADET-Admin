@@ -81,7 +81,7 @@ namespace KnnResults.Domain.Models
                     .HasMaxLength(50);
                 entity.Property(e => e.ReactionStatus)
                     .IsRequired()
-                    .HasMaxLength(10);
+                    .HasMaxLength(50);
 
                 entity.Property(e => e.CreatedAt)
                     .HasColumnType("datetime")

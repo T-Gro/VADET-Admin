@@ -80,6 +80,7 @@ module EventStore
 
     let processOfferReaction (off : OfferReaction) =
         let unpack (ImageId(s)) = s
+        printfn "Offer saved  = %A " off
 
         use dbContext = new VADETContext()
         let r = new OfferedAttributeReaction()
@@ -91,7 +92,7 @@ module EventStore
 
         dbContext.OfferedAttributeReaction.Add r |> ignore
         let saved = dbContext.SaveChanges()  
-        printfn "Offer saved  = %A " off
+        
 
         let newStatus = function
             | AcceptingOffer -> AttributeStatus.Accepted(DateTime.Now,r.User)
